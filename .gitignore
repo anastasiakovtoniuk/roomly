@@ -1,0 +1,25 @@
+node_modules/
+dist/
+
+# Локальні налаштування й секрети
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Локальні бази SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Згенерований клієнт Prisma (npm install → prisma generate)
+server/src/generated/
+
+# Журнали й службові файли
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+coverage/

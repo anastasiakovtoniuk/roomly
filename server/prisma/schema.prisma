@@ -1,0 +1,90 @@
+// Схема за docs/contracts/data_model.md. Поля, типи й обмеження змінюються лише разом із контрактом.
+// Зміни схеми — тільки через `npm run db:migrate -w server` (prisma migrate dev), не `prisma db push` (ADR-0004).
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  // Нормалізована: нижній регістр, без пробілів по краях (BR-14).
+  email        String   @unique
+  passwordHash String
+  // Значення з USER_ROLES у shared/.
+  role         String   @default("student")
+  createdAt    DateTime @default(now())
+
+  bookings          Booking[] @relation("BookingOwner")
+  confirmedBookings Booking[] @relation("BookingConfirmedBy")
+  sessions          Session[]
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  name      String
+  capacity  Int
+  building  String
+  floor     Int
+  // JSON-масив рядків; в API — string[] (data_model.md §3.2).
+  equipment String   @default("[]")
+  // Статичний непрозорий токен QR; віддається лише адміністратору (FB-12).
+  qrToken   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slots Slot[]
+}
+
+model Slot {
+  id        String   @id @default(uuid())
+  roomId    String
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+
+  room     Room      @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  bookings Booking[]
+
+  @@index([roomId, startsAt])
+}
+
+model Booking {
+  id            String    @id @default(uuid())
+  userId        String
+  slotId        String
+  // Значення з BOOKING_STATUSES у shared/.
+  status        String    @default("active")
+  deadline      DateTime
+  createdAt     DateTime  @default(now())
+  confirmedAt   DateTime?
+  confirmedById String?
+  cancelledAt   DateTime?
+
+  user        User  @relation("BookingOwner", fields: [userId], references: [id], onDelete: Restrict)
+  slot        Slot  @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  confirmedBy User? @relation("BookingConfirmedBy", fields: [confirmedById], references: [id], onDelete: Restrict)
+
+  // BR-1: не більше одного живого бронювання на слот. Обмеження має лишатися тут,
+  // а не в SQL міграції вручну: інакше перебудова таблиці мовчки його видалить (ADR-0004).
+  @@unique([slotId], map: "Booking_slotId_live_key", where: raw("status IN ('active', 'confirmed')"))
+  @@index([userId])
+  @@index([status, deadline])
+  @@index([slotId])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  // SHA-256 від токена з cookie; сам токен не зберігається.
+  tokenHash String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+}

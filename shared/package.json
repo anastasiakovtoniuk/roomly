@@ -1,0 +1,13 @@
+{
+  "name": "@roomly/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Спільні контракти клієнта й сервера: статуси, коди помилок, типи відповідей",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

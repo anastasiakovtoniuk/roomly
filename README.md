@@ -17,6 +17,65 @@
 
 [Вимоги до MVP: шлях користувача, карта історій, межі скоупу та критерії приймання](docs/requirements.md)
 
+## Технічна документація
+
+* [Технічний аналіз вимог](docs/requirements_digest.md): сутності, життєвий цикл бронювання, бізнес-правила, заборони, припущення
+* [Архітектурні рішення (ADR)](docs/adr/)
+* Контракти: [схема даних](docs/contracts/data_model.md), [API](docs/contracts/api_spec.md), [формат помилок](docs/contracts/error_format.md)
+* Інструкції для ШІ: [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md)
+* Промпти етапів: [prompts/](prompts/)
+
+## Локальний запуск
+
+**Потрібно:** Node.js 22 LTS (версія в [.nvmrc](.nvmrc)) і npm. Docker і окрема база не потрібні: база — файл SQLite.
+
+```bash
+npm install
+npm run dev
+```
+
+`npm run dev` сам:
+
+1. створює `.env` з [.env.example](.env.example), якщо його ще немає (наявний `.env` не змінюється);
+2. застосовує наявні міграції бази (`server/prisma/dev.db`);
+3. створює адміністратора з `ADMIN_EMAIL` / `ADMIN_PASSWORD` у `.env` (повторний запуск нічого не дублює);
+4. запускає сервер і клієнт разом.
+
+| Що | Адреса |
+| --- | --- |
+| Застосунок (UI) | http://localhost:5173 |
+| Перевірка здоров'я через клієнт | http://localhost:5173/api/health |
+| API напряму | http://localhost:3000/api/health |
+
+Очікувана відповідь `GET /api/health`:
+
+```json
+{ "status": "ok", "database": "ok", "serverTime": "2026-11-03T12:00:00.000Z" }
+```
+
+Зупинка — `Ctrl+C` у терміналі. Порти змінюються в `.env` (`SERVER_PORT`, `CLIENT_PORT`).
+
+### Інші команди
+
+| Команда | Що робить |
+| --- | --- |
+| `npm test` | Автоматичні тести сервера (Vitest + Supertest, окрема тестова база) |
+| `npm run lint` | ESLint |
+| `npm run format:check` | Перевірка форматування Prettier (`npm run format` — виправити) |
+| `npm run typecheck` | Перевірка типів TypeScript у всіх пакетах |
+| `npm run build` | Перевірка типів і збірка клієнта |
+| `npm run db:migrate -w server` | Нова міграція після зміни `server/prisma/schema.prisma` |
+| `npm run db:studio -w server` | Перегляд даних у Prisma Studio |
+
+### Структура
+
+| Папка | Що в ній |
+| --- | --- |
+| `client/` | React + Vite + TypeScript: мобільний вебзастосунок (ADR-0002) |
+| `server/` | Express + TypeScript: API, Prisma-схема, міграції, seed (ADR-0003, ADR-0004) |
+| `shared/` | Спільні для клієнта й сервера статуси, коди помилок, типи відповідей |
+| `docs/` | Вимоги, ADR, контракти |
+
 ## Проблема
 
 **Study rooms (навчальні кімнати)** — це невеликі окремі приміщення в університетських бібліотеках або на території кампусу, які студенти можуть забронювати на конкретний часовий слот.

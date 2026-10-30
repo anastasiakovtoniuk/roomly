@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+package-lock.json
+server/src/generated/
+server/prisma/migrations/
+# Документація й результати попередніх етапів форматуються вручну.
+docs/
+results/
+prompts/
+*.md
