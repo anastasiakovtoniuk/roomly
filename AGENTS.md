@@ -25,6 +25,7 @@ Roomly допомагає студентам бронювати навчальн
 4. [docs/requirements_digest.md](docs/requirements_digest.md) — бізнес-правила BR, заборони FB, припущення TA і прогалини G.
 5. [results/3.5_acceptance_criteria_result.md](results/3.5_acceptance_criteria_result.md) — докладні критерії та Gherkin; [results/3.4_story_refinement_result.md](results/3.4_story_refinement_result.md) — фінальні формулювання історій.
 6. Наявні технічні контракти в `docs/`, конфігурації, код і тести конкретного модуля.
+7. Для задач наскрізного сценарію: [docs/scenarios/booking_flow.md](docs/scenarios/booking_flow.md): межі сценарію, рішення за G/Q, зв'язка екранів з ендпоінтами й AC.
 
 **Правила пріоритету:**
 
@@ -51,6 +52,7 @@ Roomly допомагає студентам бронювати навчальн
 | `docs/requirements_digest.md` | Технічний аналіз вимог |
 | `docs/adr/` | Вісім запропонованих архітектурних рішень |
 | `docs/contracts/` | Схема даних, специфікація API, формат помилок |
+| `docs/scenarios/` | Межі й критерії приймання наскрізних сценаріїв; зараз [booking_flow.md](docs/scenarios/booking_flow.md) |
 | `prompts/` | Збережені промпти етапів роботи |
 | `results/` | Результати аналізу, історії та критерії приймання |
 

@@ -22,6 +22,7 @@
 * [Технічний аналіз вимог](docs/requirements_digest.md): сутності, життєвий цикл бронювання, бізнес-правила, заборони, припущення
 * [Архітектурні рішення (ADR)](docs/adr/)
 * Контракти: [схема даних](docs/contracts/data_model.md), [API](docs/contracts/api_spec.md), [формат помилок](docs/contracts/error_format.md)
+* Перший наскрізний сценарій: [Бронювання слота студентом](docs/scenarios/booking_flow.md)
 * Інструкції для ШІ: [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md)
 * Промпти етапів: [prompts/](prompts/)
 
