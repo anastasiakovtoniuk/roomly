@@ -70,12 +70,14 @@ npm run dev
 
 ### CI і ШІ-рев'ю
 
-На кожен Pull Request у будь-яку гілку працюють два workflow GitHub Actions:
+На Pull Request у будь-яку гілку працюють два workflow GitHub Actions:
 
-| Workflow | Що робить |
-| --- | --- |
-| [ci.yml](.github/workflows/ci.yml) | `npm ci`, lint, format:check, typecheck, test, збірка клієнта; також на push у `main` |
-| [ai-review.yml](.github/workflows/ai-review.yml) | Claude Code (`anthropics/claude-code-action@v1`) переглядає diff PR за [спільними правилами аудиту](prompts/5.3_ai_code_review.md) і залишає один коментар |
+| Workflow | Коли | Що робить |
+| --- | --- | --- |
+| [ci.yml](.github/workflows/ci.yml) | Кожен PR, зокрема з форків; push у `main` | `npm ci`, lint, format:check, typecheck, test, збірка клієнта |
+| [ai-review.yml](.github/workflows/ai-review.yml) | PR із гілок цього репозиторію; PR із форків пропускаються | Claude Code (`anthropics/claude-code-action@v1`) переглядає diff PR за [спільними правилами аудиту](prompts/5.3_ai_code_review.md) і залишає один коментар |
+
+Правила аудиту агент бере з **базової гілки** PR, а не з гілки самого PR. Тому зміна правил у PR почне діяти лише після мерджу, і PR не може послабити власне рев'ю.
 
 **Секрет.** ШІ-рев'ю працює від підписки Claude робочого акаунта команди, а не від ключа API. Налаштування:
 
