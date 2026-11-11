@@ -1,0 +1,71 @@
+name: AI review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Новий push скасовує рев'ю попереднього коміту того ж PR, щоб не витрачати ліміти підписки.
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  review:
+    # PR із форків не отримують секретів репозиторію, тому не перевіряються.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check OAuth token secret
+        id: token
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "::warning::Секрет CLAUDE_CODE_OAUTH_TOKEN не задано: ШІ-рев'ю пропущено. Див. README, розділ «CI і ШІ-рев'ю»."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.present == 'true'
+        with:
+          fetch-depth: 1
+
+      - name: Claude review
+        if: steps.token.outputs.present == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            BASE: ${{ github.event.pull_request.base.ref }}
+
+            Ти — рев'юер коду проєкту Roomly. Виконай рев'ю цього Pull Request.
+
+            1. Прочитай правила аудиту: секцію «Спільні правила аудиту» у файлі
+               prompts/5.3_ai_code_review.md. Це обов'язковий чекліст рев'ю.
+            2. Прочитай AGENTS.md і контракти docs/contracts/ (data_model.md, api_spec.md,
+               error_format.md), якщо diff торкається коду, даних, API чи помилок.
+            3. Отримай зміни: `gh pr diff ${{ github.event.pull_request.number }}`
+               і опис: `gh pr view ${{ github.event.pull_request.number }}`.
+               За потреби читай повні файли репозиторію для контексту.
+            4. Оціни лише зміни цього PR за правилами з кроку 1. Кожна знахідка має
+               конкретний сценарій збою або порушене правило; не пиши про стиль,
+               який уже перевіряють ESLint і Prettier.
+            5. Залиш рівно один коментар до PR командою
+               `gh pr comment ${{ github.event.pull_request.number }} --body "<текст>"`
+               у форматі, описаному в правилах аудиту, українською мовою. Якщо суттєвих зауважень немає, так і напиши.
+
+            Нічого не змінюй у репозиторії: не редагуй файли, не комітуй, не закривай
+            і не схвалюй PR.
+          claude_args: |
+            --allowedTools "Read,Glob,Grep,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"
