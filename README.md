@@ -68,6 +68,31 @@ npm run dev
 | `npm run db:migrate -w server` | Нова міграція після зміни `server/prisma/schema.prisma` |
 | `npm run db:studio -w server` | Перегляд даних у Prisma Studio |
 
+### CI і ШІ-рев'ю
+
+На кожен Pull Request у будь-яку гілку працюють два workflow GitHub Actions:
+
+| Workflow | Що робить |
+| --- | --- |
+| [ci.yml](.github/workflows/ci.yml) | `npm ci`, lint, format:check, typecheck, test, збірка клієнта; також на push у `main` |
+| [ai-review.yml](.github/workflows/ai-review.yml) | Claude Code (`anthropics/claude-code-action@v1`) переглядає diff PR за [спільними правилами аудиту](prompts/5.3_ai_code_review.md) і залишає один коментар |
+
+**Секрет.** ШІ-рев'ю працює від підписки Claude робочого акаунта команди, а не від ключа API. Налаштування:
+
+1. Людина з доступом до робочого акаунта входить у Claude Code під ним і виконує `claude setup-token`.
+2. Власниця репозиторію додає отриманий токен у Settings → Secrets and variables → Actions → New repository secret з назвою `CLAUDE_CODE_OAUTH_TOKEN`.
+
+Токен не комітити й не вставляти в issue, коментарі, PR чи чат.
+
+**Повторне рев'ю.** Рев'ю запускається автоматично на кожен новий push у гілку PR. Запустити його без змін можна, закривши й знову відкривши PR, або кнопкою Re-run jobs на сторінці запуску workflow AI review.
+
+**Обмеження.**
+
+- PR із форків не перевіряються: їм не доступні секрети репозиторію.
+- Без секрету `CLAUDE_CODE_OAUTH_TOKEN` рев'ю пропускається з попередженням у лозі, а workflow не падає.
+- Кожен PR і кожен push витрачають ліміти підписки робочого акаунта. Новий push скасовує незавершене рев'ю попереднього коміту того ж PR. Коли ліміти вичерпано, рев'ю падає до їх оновлення.
+- Агент лише читає файли й коментує PR: він не змінює код, не схвалює і не зливає PR.
+
 ### Структура
 
 | Папка | Що в ній |
