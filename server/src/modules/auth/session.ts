@@ -14,6 +14,8 @@ export function hashSessionToken(token: string): string {
 }
 
 // Без строку дії (TA-1): cookie живе до виходу. Secure — лише при HTTPS, щоб локальний HTTP працював.
+// req.secure правдивий, лише коли TLS завершується на самому Express: у MVP проксі немає (ADR-0007).
+// Для розгортання за TLS-проксі потрібен `app.set('trust proxy', …)`, інакше cookie піде без Secure.
 function cookieOptions(req: Request): CookieOptions {
   return { httpOnly: true, sameSite: 'lax', path: '/', secure: req.secure };
 }

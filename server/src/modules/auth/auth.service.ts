@@ -72,19 +72,14 @@ export async function register(input: RegisterBody, previousToken: string | unde
 }
 
 // Хеш для порівняння, коли пошти немає: час відповіді не має видавати, чи існує акаунт.
-let dummyHash: Promise<string> | undefined;
-function getDummyHash(): Promise<string> {
-  dummyHash ??= bcrypt.hash('roomly-dummy-password', BCRYPT_ROUNDS);
-  return dummyHash;
-}
+// Рахується під час завантаження модуля, а не при першому вході, щоб і перший запит
+// з неіснуючою поштою виконував лише одне bcrypt-порівняння.
+const dummyHash = bcrypt.hash('roomly-dummy-password', BCRYPT_ROUNDS);
 
 // US-X.1a: однакова відповідь INVALID_CREDENTIALS для неіснуючої пошти й хибного пароля.
 export async function login(input: LoginBody, previousToken: string | undefined): Promise<AuthResult> {
   const record = await prisma.user.findUnique({ where: { email: input.email } });
-  const passwordMatches = await bcrypt.compare(
-    input.password,
-    record?.passwordHash ?? (await getDummyHash()),
-  );
+  const passwordMatches = await bcrypt.compare(input.password, record?.passwordHash ?? (await dummyHash));
 
   if (!record || !passwordMatches) {
     throw new AppError('INVALID_CREDENTIALS', 'Неправильна пошта або пароль');
