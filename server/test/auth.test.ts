@@ -110,6 +110,18 @@ describe('POST /api/auth/register', () => {
     expect(await prisma.user.count({ where: { email } })).toBe(1);
   });
 
+  it('US-1.2-AC-01 пароль довший за 72 байти UTF-8 відхиляється з reason too_big (Q08)', async () => {
+    const email = uniqueEmail('olena');
+
+    const res = await register(email, { password: 'ж'.repeat(37) });
+
+    expect(res.status).toBe(400);
+    expect((res.body as ErrorBody).error.details).toEqual({
+      fields: [{ path: 'password', reason: 'too_big' }],
+    });
+    expect(await prisma.user.count({ where: { email } })).toBe(0);
+  });
+
   it('US-1.2-AC-01 паралельна реєстрація однієї пошти створює один акаунт', async () => {
     const email = uniqueEmail('olena');
 
