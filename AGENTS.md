@@ -15,7 +15,7 @@ Roomly допомагає студентам бронювати навчальн
 
 ## 2. Поточний стан і джерела істини
 
-Репозиторій містить документацію, технічні контракти (`docs/contracts/`) і **Walking Skeleton без бізнес-логіки**: npm workspaces, сервер з `GET /api/health` і єдиним обробником помилок, схему Prisma й першу міграцію за контрактом, seed адміністратора, клієнт-заглушку, тести, лінтер, форматер і CI. **Жодну User Story ще не реалізовано.** Усі **ADR-0001…ADR-0008 мають статус «Запропоновано»**.
+Репозиторій містить документацію, технічні контракти (`docs/contracts/`) і **Walking Skeleton без бізнес-логіки**: npm workspaces, сервер з `GET /api/health` і єдиним обробником помилок, схему Prisma й першу міграцію за контрактом, seed адміністратора, клієнт-заглушку, тести, лінтер, форматер і CI. На сервері реалізовано автентифікацію (US-1.2, US-X.1a, US-X.1b: реєстрація, вхід, вихід, сесії); інші User Story ще не реалізовано. Усі **ADR-0001…ADR-0008 мають статус «Запропоновано»**.
 
 Перед змінами прочитай:
 
@@ -68,10 +68,12 @@ Roomly допомагає студентам бронювати навчальн
 | `server/prisma/migrations/` | Міграції; змінюються лише через `prisma migrate dev` |
 | `server/prisma/seed.ts` | Ідемпотентний seed адміністратора зі змінних середовища |
 | `server/src/app.ts` | Збирання Express-застосунку: підключення роутерів модулів, 404 і обробник помилок |
-| `server/src/modules/<модуль>/` | Модулі за доменом; зараз є лише `health/` |
+| `server/src/modules/<модуль>/` | Модулі за доменом; зараз є `health/` і `auth/` (реєстрація, вхід, вихід, `me`, сесії в cookie `roomly_session`) |
 | `server/src/lib/clock.ts` | Єдине підмінюване джерело часу |
 | `server/src/lib/appError.ts` | Помилка з кодом із `error_format.md` |
 | `server/src/middleware/errorHandler.ts` | Перетворення будь-якої помилки на єдине тіло |
+| `server/src/middleware/auth.ts` | `requireAuth` (користувач і роль лише із сесії в БД, інакше `UNAUTHENTICATED`) і `requireRole(...)` (`FORBIDDEN`); `getAuthUser(req)` для обробників |
+| `server/src/middleware/requireJson.ts` | POST/PUT/PATCH/DELETE під `/api` лише з `Content-Type: application/json`, інакше `VALIDATION_ERROR` з reason `invalid_content_type` |
 | `server/src/middleware/validate.ts` | Перевірка `params`/`query`/`body` схемами Zod із `shared/`; невдача — `VALIDATION_ERROR` з `details.fields` |
 | `server/src/db/prisma.ts` | Клієнт Prisma з адаптером better-sqlite3 |
 | `server/src/generated/` | Згенерований клієнт Prisma; не редагувати, не комітити |
@@ -99,7 +101,7 @@ Roomly допомагає студентам бронювати навчальн
 | Запуск | Node.js + npm, без Docker; проксі Vite до API | ADR-0007 |
 | Перевірки | Vitest, Supertest, SQLite для інтеграційних тестів; ESLint, Prettier, strict TypeScript | ADR-0008 |
 
-**Фактичні версії** (див. маніфести й `package-lock.json`): Node.js 22 LTS (`.nvmrc`, `engines`), TypeScript 6.0 (не 7: typescript-eslint підтримує < 6.1), Express 5, React 19, React Router 8, Vite 8, Vitest 5, ESLint 10, Zod 4 (у `shared` і `server`), Prisma **7.10.1** точно. Не оновлюй Prisma до 8 (тег `latest` вказує на 8.0.0-rc) і не підміняй версії тегом `latest`. Bcryptjs-логіка входу, сесії й таймер автоскасування ще не підключені: вони з'являються разом з історіями.
+**Фактичні версії** (див. маніфести й `package-lock.json`): Node.js 22 LTS (`.nvmrc`, `engines`), TypeScript 6.0 (не 7: typescript-eslint підтримує < 6.1), Express 5, React 19, React Router 8, Vite 8, Vitest 5, ESLint 10, Zod 4 (у `shared` і `server`), Prisma **7.10.1** точно. Не оновлюй Prisma до 8 (тег `latest` вказує на 8.0.0-rc) і не підміняй версії тегом `latest`. Вхід через bcryptjs і серверні сесії підключені (модуль `auth/`); таймер автоскасування ще ні: він з'являється разом з історіями.
 
 ### Збірка, запуск і тестування
 

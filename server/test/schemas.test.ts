@@ -38,6 +38,21 @@ describe('RegisterBody', () => {
     expect(RegisterBody.safeParse({ ...validRegister, password: 'a'.repeat(73) }).success).toBe(false);
   });
 
+  it('US-1.2-AC-01 верхня межа пароля — 72 байти UTF-8, а не символи (Q08)', () => {
+    // Кирилична літера займає 2 байти: 36 літер = 72 байти, 37 = 74.
+    expect(RegisterBody.safeParse({ ...validRegister, password: 'ж'.repeat(36) }).success).toBe(true);
+
+    const tooLong = RegisterBody.safeParse({ ...validRegister, password: 'ж'.repeat(37) });
+
+    expect(tooLong.success).toBe(false);
+    expect(tooLong.error?.issues.map((issue) => [issue.path.join('.'), issue.code])).toEqual([
+      ['password', 'too_big'],
+    ]);
+    // Емодзі — 4 байти: 18 = 72 байти, 19 = 76.
+    expect(RegisterBody.safeParse({ ...validRegister, password: '🔑'.repeat(18) }).success).toBe(true);
+    expect(RegisterBody.safeParse({ ...validRegister, password: '🔑'.repeat(19) }).success).toBe(false);
+  });
+
   it('US-1.2-AC-01 ім’я 1…100 символів після обрізання пробілів', () => {
     expect(RegisterBody.safeParse({ ...validRegister, name: '   ' }).success).toBe(false);
     expect(RegisterBody.safeParse({ ...validRegister, name: 'я'.repeat(100) }).success).toBe(true);

@@ -1,5 +1,7 @@
 import express from 'express';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { requireJson } from './middleware/requireJson';
+import { authRouter } from './modules/auth/auth.router';
 import { healthRouter } from './modules/health/health.router';
 
 export function createApp() {
@@ -7,10 +9,12 @@ export function createApp() {
 
   app.disable('x-powered-by');
   app.use(express.json());
+  app.use('/api', requireJson);
 
-  // Модулі за доменом (ADR-0001, ADR-0003): auth, rooms, bookings, check-ins, admin
+  // Модулі за доменом (ADR-0001, ADR-0003): rooms, bookings, check-ins, admin
   // підключаються тут під час реалізації історій.
   app.use('/api/health', healthRouter);
+  app.use('/api/auth', authRouter);
 
   app.use('/api', notFoundHandler);
   app.use(errorHandler);
