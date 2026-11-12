@@ -50,7 +50,7 @@ async function startSession(userId: string, previousToken: string | undefined): 
 }
 
 // US-1.2: роль завжди student (BR-14, FB-14) — поля role у RegisterBody немає взагалі.
-// Q08: автоматичний вхід після реєстрації — [Пропозиція] з api_spec.md §5.
+// Q08: автоматичний вхід після реєстрації — [Рішення команди], api_spec.md §5.
 export async function register(input: RegisterBody, previousToken: string | undefined): Promise<AuthResult> {
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
 
