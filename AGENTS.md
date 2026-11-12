@@ -78,6 +78,7 @@ Roomly допомагає студентам бронювати навчальн
 | `client/src/api/http.ts` | Єдина обгортка над fetch: `ApiError` (код із сервера) і `NetworkError` |
 | `client/src/pages/` | Екрани; зараз лише сторінка-заглушка `HomePage` |
 | `.github/workflows/ci.yml` | lint, format:check, typecheck, test, build |
+| `.github/workflows/ai-review.yml` | ШІ-рев'ю кожного PR за правилами `prompts/5.3_ai_code_review.md`; секрет `CLAUDE_CODE_OAUTH_TOKEN` |
 | `.github/pull_request_template.md` | Шаблон опису Pull Request |
 
 Нові модулі сервера додаються в `server/src/modules/<модуль>/` з поділом роутер → сервіс → Prisma і підключаються в `server/src/app.ts`. Не посилайся на файли, яких ще немає.
