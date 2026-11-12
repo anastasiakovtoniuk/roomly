@@ -301,6 +301,18 @@ describe('POST /api/auth/logout', () => {
 });
 
 describe('Content-Type для запитів зі зміною даних', () => {
+  it('перевірка Content-Type іде до визначення маршруту: невідомий шлях без JSON — 400, з JSON — 404', async () => {
+    const withoutJson = await request(app).post('/api/does-not-exist').type('form').send({ a: '1' });
+    const withJson = await request(app).post('/api/does-not-exist').send({ a: '1' });
+
+    expect(withoutJson.status).toBe(400);
+    expect((withoutJson.body as ErrorBody).error.details).toEqual({
+      fields: [{ path: 'body', reason: 'invalid_content_type' }],
+    });
+    expect(withJson.status).toBe(404);
+    expect(errorCode(withJson)).toBe('ENDPOINT_NOT_FOUND');
+  });
+
   it('US-1.2-AC-01 реєстрація формою без application/json повертає 400 VALIDATION_ERROR invalid_content_type', async () => {
     const email = uniqueEmail('olena');
 
