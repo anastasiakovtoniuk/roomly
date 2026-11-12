@@ -199,18 +199,19 @@ describe('GET /api/rooms', () => {
     expect(rooms.find((r) => r.id === fourth.id)).toMatchObject({ building, floor: 4 });
   });
 
-  it('кімнати впорядковані за name', async () => {
+  it('кімнати впорядковані за name українською абеткою, без різниці регістру, числа — за значенням', async () => {
     const prefix = `Сорт ${randomUUID()}`;
-    const c = await createRoom({ name: `${prefix} C` });
-    const a = await createRoom({ name: `${prefix} A` });
-    const b = await createRoom({ name: `${prefix} B` });
+    // Створюються не за порядком; у байтовому порівнянні SQLite «Їжак» і «яблуня» стояли б інакше.
+    const names = ['яблуня', 'Зала 10', 'Їжак', 'береза', 'Зала 9', 'Айва'];
+    const created = new Map<string, string>();
+    for (const name of names) created.set((await createRoom({ name: `${prefix} ${name}` })).id, name);
 
     const res = await request(app).get('/api/rooms').set('Cookie', cookie);
 
-    const ids = (res.body as RoomListResponse).rooms
-      .map((r) => r.id)
-      .filter((id) => [a.id, b.id, c.id].includes(id));
-    expect(ids).toEqual([a.id, b.id, c.id]);
+    const order = (res.body as RoomListResponse).rooms
+      .filter((r) => created.has(r.id))
+      .map((r) => created.get(r.id));
+    expect(order).toEqual(['Айва', 'береза', 'Зала 9', 'Зала 10', 'Їжак', 'яблуня']);
   });
 
   it('FB-12 відповідь не містить qrToken і має лише поля Room', async () => {

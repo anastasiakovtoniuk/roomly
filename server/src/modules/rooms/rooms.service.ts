@@ -5,18 +5,10 @@ import {
   type Room,
 } from '@roomly/shared';
 import { prisma } from '../../db/prisma';
+import type { Prisma } from '../../generated/prisma/client';
 import { AppError } from '../../lib/appError';
 import { now } from '../../lib/clock';
 import { toLocalDate, utcRangeCovering } from '../../lib/localDate';
-
-interface RoomRecord {
-  id: string;
-  name: string;
-  capacity: number;
-  building: string;
-  floor: number;
-  equipment: string;
-}
 
 // qrToken навмисно не вибирається з бази: його немає в Room ні для кого (FB-12).
 const ROOM_FIELDS = {
@@ -26,7 +18,13 @@ const ROOM_FIELDS = {
   building: true,
   floor: true,
   equipment: true,
-} as const;
+} as const satisfies Prisma.RoomSelect;
+
+type RoomRecord = Prisma.RoomGetPayload<{ select: typeof ROOM_FIELDS }>;
+
+// Абетка української мови: SQLite порівнює байти, тож велика й мала літери та «і», «ї», «є»
+// опинялися б не на своїх місцях. Кімнат десятки (TA-13), тому сортування в пам'яті дешеве.
+const roomNameOrder = new Intl.Collator('uk', { numeric: true });
 
 // equipment зберігається JSON-масивом рядків (data_model.md §3.2). Зіпсоване значення —
 // помилка даних, а не порожній перелік: інакше студент побачив би кімнату без обладнання (US-2.2-AC-01).
@@ -51,8 +49,10 @@ function toApiRoom(record: RoomRecord): Room {
 
 // US-1.3, US-2.1…2.3: усі кімнати за назвою ([Пропозиція] api_spec.md §6), без фільтрів (FB-15).
 export async function listRooms(): Promise<Room[]> {
-  const records = await prisma.room.findMany({ select: ROOM_FIELDS, orderBy: { name: 'asc' } });
-  return records.map(toApiRoom);
+  const records = await prisma.room.findMany({ select: ROOM_FIELDS });
+  return records
+    .sort((a, b) => roomNameOrder.compare(a.name, b.name) || a.id.localeCompare(b.id))
+    .map(toApiRoom);
 }
 
 export async function getRoom(roomId: string): Promise<Room> {

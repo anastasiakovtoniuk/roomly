@@ -3,7 +3,7 @@ import {
   AvailableSlotsQuery,
   RoomIdParams,
   type AvailableSlotListResponse,
-  type Room,
+  type RoomResponse,
   type RoomListResponse,
 } from '@roomly/shared';
 import { requireAuth } from '../../middleware/auth';
@@ -22,7 +22,7 @@ roomsRouter.get('/', async (_req, res) => {
 
 roomsRouter.get('/:roomId', validate({ params: RoomIdParams }), async (req, res) => {
   const { roomId } = req.params as RoomIdParams;
-  const body: { room: Room } = { room: await roomsService.getRoom(roomId) };
+  const body: RoomResponse = { room: await roomsService.getRoom(roomId) };
   res.json(body);
 });
 
