@@ -58,6 +58,11 @@ export interface RoomListResponse {
   rooms: Room[];
 }
 
+// GET /api/rooms/:roomId
+export interface RoomResponse {
+  room: Room;
+}
+
 // GET /api/rooms/:roomId/available-slots
 export interface AvailableSlotListResponse {
   roomId: string;
