@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import type { AvailableSlot, AvailableSlotListResponse, Room } from '@roomly/shared';
+import type { AvailableSlot, AvailableSlotListResponse, ErrorCode, Room } from '@roomly/shared';
 import { createBooking } from '../api/bookings';
 import { ApiError, NetworkError } from '../api/http';
 import { listAvailableSlots, listRooms } from '../api/rooms';
@@ -10,6 +10,12 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { Loader } from '../components/Loader';
 import { formatDate, formatTime, universityDate } from '../lib/dateTime';
 import styles from './RoomsPage.module.css';
+
+const SLOT_REFRESH_ERROR_CODES: readonly ErrorCode[] = [
+  'SLOT_ALREADY_BOOKED',
+  'SLOT_NOT_BOOKABLE',
+  'SLOT_NOT_FOUND',
+];
 
 type RoomsState = { kind: 'loading' } | { kind: 'ready'; rooms: Room[] } | { kind: 'error'; error: unknown };
 
@@ -139,10 +145,7 @@ export function RoomsPage() {
       if (error instanceof NetworkError) {
         // Результат POST невідомий: повтор блокується, пропонуємо перевірити власні записи.
         setUncertainSlotIds((current) => new Set(current).add(slot.id));
-      } else if (
-        error instanceof ApiError &&
-        ['SLOT_ALREADY_BOOKED', 'SLOT_NOT_BOOKABLE', 'SLOT_NOT_FOUND'].includes(error.code)
-      ) {
+      } else if (error instanceof ApiError && SLOT_REFRESH_ERROR_CODES.includes(error.code)) {
         setSlotsState(null);
         setSlotsVersion((current) => current + 1);
       }
