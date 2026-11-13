@@ -143,13 +143,27 @@ describe('GET /api/bookings?scope=upcoming', () => {
     });
   });
 
-  it('US-4.2-AC-01 Q12 [Пропозиція]: поточне бронювання (слот почався, не завершився) лишається в upcoming', async () => {
+  it('US-4.2-AC-01 Q12 [Рішення команди]: поточне бронювання (слот почався, не завершився) у past, а не в upcoming', async () => {
     const cookie = await studentCookie();
     const booking = await bookSlot(cookie, (await createSlot((await createRoom()).id, TOMORROW_10)).id);
     setClock(() => new Date('2026-11-03T08:30:00.000Z'));
 
+    expect(listedIds(await list(cookie, 'upcoming'))).toEqual([]);
+    expect(listedIds(await list(cookie, 'past'))).toEqual([booking.id]);
+  });
+
+  it('US-4.2-AC-01 Q12 [Рішення команди]: до початку слота бронювання в upcoming, рівно на початку вже в past', async () => {
+    const cookie = await studentCookie();
+    const booking = await bookSlot(cookie, (await createSlot((await createRoom()).id, TOMORROW_10)).id);
+    const start = new Date(TOMORROW_10).getTime();
+
+    setClock(() => new Date(start - 1));
     expect(listedIds(await list(cookie, 'upcoming'))).toEqual([booking.id]);
     expect(listedIds(await list(cookie, 'past'))).toEqual([]);
+
+    setClock(() => new Date(start));
+    expect(listedIds(await list(cookie, 'upcoming'))).toEqual([]);
+    expect(listedIds(await list(cookie, 'past'))).toEqual([booking.id]);
   });
 
   it('US-4.2-AC-02 чужі майбутні бронювання не потрапляють у список', async () => {
@@ -388,7 +402,7 @@ describe('POST /api/bookings/:bookingId/cancel', () => {
     expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status).toBe('confirmed');
   });
 
-  it('Q07 [Пропозиція]: активне бронювання, що вже почалося, студент скасовує', async () => {
+  it('Q07 [Рішення команди]: активне бронювання, що вже почалося, студент скасовує', async () => {
     const cookie = await studentCookie();
     const booking = await bookSlot(cookie, (await createSlot((await createRoom()).id, TOMORROW_10)).id);
     setClock(() => new Date('2026-11-03T08:30:00.000Z'));
