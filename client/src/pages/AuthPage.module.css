@@ -1,0 +1,41 @@
+.page {
+  width: 100%;
+  max-width: 26rem;
+  margin-inline: auto;
+}
+
+.heading h1 {
+  margin-bottom: 0.5rem;
+}
+
+.intro {
+  margin: 0 0 1.5rem;
+  color: var(--color-muted);
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+}
+
+.submit {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.switch {
+  margin: 1.25rem 0 0;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.switch a {
+  display: inline-block;
+  padding-block: 0.5rem;
+  font-weight: 600;
+}
