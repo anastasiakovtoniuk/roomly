@@ -2,8 +2,9 @@ import { Link, Navigate, Route, Routes } from 'react-router';
 import { AuthRoute } from './auth/AuthRoute';
 import { Layout } from './components/Layout';
 import { EmptyState } from './components/EmptyState';
+import { BookingDetailsPage } from './pages/BookingDetailsPage';
+import { BookingsPage } from './pages/BookingsPage';
 import { LoginPage } from './pages/LoginPage';
-import { PendingPage } from './pages/PendingPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { RoomsPage } from './pages/RoomsPage';
 
@@ -20,8 +21,8 @@ export function App() {
           <Route path="rooms" element={<RoomsPage />} />
         </Route>
         <Route element={<AuthRoute studentOnly />}>
-          <Route path="bookings" element={<PendingPage title="Мої бронювання" />} />
-          <Route path="bookings/:id" element={<PendingPage title="Деталі бронювання" />} />
+          <Route path="bookings" element={<BookingsPage />} />
+          <Route path="bookings/:id" element={<BookingDetailsPage />} />
         </Route>
         <Route
           path="*"
