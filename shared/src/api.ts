@@ -71,6 +71,12 @@ export interface AvailableSlotListResponse {
   slots: AvailableSlot[];
 }
 
+// POST /api/bookings; serverTime — основа для таймера на клієнті (TA-5).
+export interface BookingResponse {
+  booking: Booking;
+  serverTime: string;
+}
+
 // GET /api/bookings; serverTime — основа для таймера на клієнті (TA-5).
 export interface BookingListResponse {
   bookings: Booking[];
