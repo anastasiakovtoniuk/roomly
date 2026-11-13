@@ -66,6 +66,7 @@ npm run dev
 | `npm run typecheck` | Перевірка типів TypeScript у всіх пакетах |
 | `npm run build` | Перевірка типів і збірка клієнта |
 | `npm run db:migrate -w server` | Нова міграція після зміни `server/prisma/schema.prisma` |
+| `npm run db:seed:demo -w server` | Необов'язкові демо-дані: 4 кімнати й слоти на сьогодні та 3 наступні дні від моменту запуску; повторний запуск нічого не дублює |
 | `npm run db:studio -w server` | Перегляд даних у Prisma Studio |
 
 ### CI і ШІ-рев'ю
