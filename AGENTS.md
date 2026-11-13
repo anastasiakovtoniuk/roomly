@@ -118,6 +118,7 @@ Roomly допомагає студентам бронювати навчальн
 | Лінтер | `npm run lint` | ESLint з кореневим `eslint.config.js` |
 | Перевірка форматування | `npm run format:check` | Prettier без змін файлів; `npm run format` — виправити |
 | Нова міграція | `npm run db:migrate -w server` | `prisma migrate dev` після зміни `schema.prisma` |
+| Демо-дані | `npm run db:seed:demo -w server` | `server/prisma/seed-demo.ts`: кімнати й слоти відносно моменту запуску, без користувачів і бронювань; ідемпотентний, з `npm run dev` не запускається |
 | Перегляд даних | `npm run db:studio -w server` | Prisma Studio |
 
 `npm run dev` застосовує лише **наявні** міграції й не скидає базу. Порти й параметри — змінні `SERVER_PORT`, `CLIENT_PORT`, `DATABASE_URL`, `APP_TIMEZONE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` у `.env`; нових змінних не вигадуй без оновлення `.env.example` і README. Сервер у dev запускається через `node --watch --import tsx`, бо `tsx watch` під concurrently на Windows не стартує.
