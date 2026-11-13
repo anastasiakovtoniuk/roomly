@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEMO_ROOMS, DEMO_SLOT_HOURS, DEMO_DAYS_AHEAD, seedDemo } from '../prisma/seed-demo';
 import { prisma } from '../src/db/prisma';
@@ -29,30 +30,35 @@ describe('localDateTimeToUtc', () => {
   });
 });
 
-// Тести цього блоку йдуть послідовно й спираються на дані попереднього: демо-кімнати мають
-// фіксовані назви, а тестова база створюється з міграцій один раз на запуск (globalSetup).
+// Тести цього блоку йдуть послідовно й спираються на дані попереднього. Тестова база спільна
+// для всіх файлів, що виконуються паралельно, а rooms.test.ts створює власну кімнату «R101» —
+// ту саму назву, що й у демо-кімнати. Тому seed тут отримує DEMO_ROOMS з унікальним префіксом
+// цього запуску: інакше seed знайшов би чужу R101 як «наявну» (CI: expected 3 to be 4).
 describe('демо-seed (data_model.md §8, issue #9)', () => {
   // 12:30 за Києвом: на сьогодні лишаються слоти з 13:00.
   const NOW = new Date('2026-11-02T10:30:00.000Z');
   const DEMO_DATES = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'];
+  const PREFIX = `seed-test ${randomUUID()}`;
+  const TEST_ROOMS = DEMO_ROOMS.map((room) => ({ ...room, name: `${PREFIX} ${room.name}` }));
+  const TEST_ROOM_NAMES = TEST_ROOMS.map((r) => r.name);
 
   function demoRoomIds() {
     return prisma.room
-      .findMany({ where: { name: { in: DEMO_ROOMS.map((r) => r.name) } }, select: { id: true } })
+      .findMany({ where: { name: { in: TEST_ROOM_NAMES } }, select: { id: true } })
       .then((rooms) => rooms.map((r) => r.id));
   }
 
   it('створює кімнати з різними корпусами, поверхами, місткістю й обладнанням і слоти лише в майбутньому', async () => {
     setClock(() => NOW);
 
-    const result = await seedDemo();
+    const result = await seedDemo(TEST_ROOMS);
 
     expect(result.roomsCreated).toBe(DEMO_ROOMS.length);
     expect(result.roomsExisting).toBe(0);
     expect(DEMO_ROOMS.length).toBeGreaterThanOrEqual(3);
     expect(DEMO_ROOMS.length).toBeLessThanOrEqual(4);
 
-    const rooms = await prisma.room.findMany({ where: { name: { in: DEMO_ROOMS.map((r) => r.name) } } });
+    const rooms = await prisma.room.findMany({ where: { name: { in: TEST_ROOM_NAMES } } });
     expect(rooms).toHaveLength(DEMO_ROOMS.length);
     expect(new Set(rooms.map((r) => r.building)).size).toBeGreaterThan(1);
     expect(new Set(rooms.map((r) => r.floor)).size).toBeGreaterThan(1);
@@ -86,7 +92,7 @@ describe('демо-seed (data_model.md §8, issue #9)', () => {
     const roomIds = await demoRoomIds();
     const slotsBefore = await prisma.slot.count({ where: { roomId: { in: roomIds } } });
 
-    const result = await seedDemo();
+    const result = await seedDemo(TEST_ROOMS);
 
     expect(result).toMatchObject({ roomsCreated: 0, roomsExisting: DEMO_ROOMS.length, slotsCreated: 0 });
     expect(await demoRoomIds()).toHaveLength(DEMO_ROOMS.length);
@@ -94,7 +100,7 @@ describe('демо-seed (data_model.md §8, issue #9)', () => {
   });
 
   it('наступного дня додає слоти нової дати, але пропускає ті, що перетинаються з наявним слотом кімнати', async () => {
-    const room = await prisma.room.findFirstOrThrow({ where: { name: DEMO_ROOMS[0]?.name } });
+    const room = await prisma.room.findFirstOrThrow({ where: { name: TEST_ROOMS[0]?.name } });
     // Слот, створений «вручну»: 09:30–10:30 за Києвом 06.11 перетинає демо-слоти 09:00 і 10:00.
     await prisma.slot.create({
       data: {
@@ -105,7 +111,7 @@ describe('демо-seed (data_model.md §8, issue #9)', () => {
     });
     setClock(() => new Date(NOW.getTime() + 24 * 60 * 60 * 1000));
 
-    const result = await seedDemo();
+    const result = await seedDemo(TEST_ROOMS);
 
     expect(result.roomsCreated).toBe(0);
     // Нова дата 06.11: повний день у кожній кімнаті, крім двох слотів, що перетинаються.

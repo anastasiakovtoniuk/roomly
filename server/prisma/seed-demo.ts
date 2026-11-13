@@ -9,7 +9,7 @@ import { prisma } from '../src/db/prisma';
 import { now } from '../src/lib/clock';
 import { localDateTimeToUtc, toLocalDate } from '../src/lib/localDate';
 
-interface DemoRoom {
+export interface DemoRoom {
   name: string;
   capacity: number;
   building: string;
@@ -71,36 +71,48 @@ async function ensureRoom(room: DemoRoom): Promise<{ id: string; created: boolea
   return { id: created.id, created: true };
 }
 
-export async function seedDemo(): Promise<SeedDemoResult> {
+// `rooms` — лише для тестів: спільна тестова база містить кімнати інших файлів тестів з тими самими
+// назвами (наприклад, R101), тож тест передає власні унікальні назви. Скрипт завжди бере DEMO_ROOMS.
+export async function seedDemo(rooms: readonly DemoRoom[] = DEMO_ROOMS): Promise<SeedDemoResult> {
   const startedAt = now();
   const today = toLocalDate(startedAt);
   const result: SeedDemoResult = { roomsCreated: 0, roomsExisting: 0, slotsCreated: 0, slotsSkipped: 0 };
 
-  for (const demoRoom of DEMO_ROOMS) {
+  // Однакові для всіх кімнат проміжки: лише години, що ще не настали — розпочатий слот однаково
+  // не бронюється (G1/Q04 «а»).
+  const candidates: { startsAt: Date; endsAt: Date }[] = [];
+  for (let day = 0; day <= DEMO_DAYS_AHEAD; day += 1) {
+    const date = addDays(today, day);
+    for (const hour of DEMO_SLOT_HOURS) {
+      const startsAt = localDateTimeToUtc(date, hour);
+      if (startsAt.getTime() > startedAt.getTime()) {
+        candidates.push({ startsAt, endsAt: new Date(startsAt.getTime() + SLOT_DURATION_MS) });
+      }
+    }
+  }
+  const first = candidates[0];
+  const last = candidates[candidates.length - 1];
+
+  for (const demoRoom of rooms) {
     const room = await ensureRoom(demoRoom);
     if (room.created) result.roomsCreated += 1;
     else result.roomsExisting += 1;
+    if (!first || !last) continue;
 
-    for (let day = 0; day <= DEMO_DAYS_AHEAD; day += 1) {
-      const date = addDays(today, day);
-      for (const hour of DEMO_SLOT_HOURS) {
-        const startsAt = localDateTimeToUtc(date, hour);
-        // Лише години, що ще не настали: розпочатий слот однаково не бронюється (G1/Q04 «а»).
-        if (startsAt.getTime() <= startedAt.getTime()) continue;
-        const endsAt = new Date(startsAt.getTime() + SLOT_DURATION_MS);
-
-        // Перетин із будь-яким слотом кімнати (BR-13) — і повторний запуск, і слот, створений вручну.
-        const overlapping = await prisma.slot.findFirst({
-          where: { roomId: room.id, startsAt: { lt: endsAt }, endsAt: { gt: startsAt } },
-          select: { id: true },
-        });
-        if (overlapping) {
-          result.slotsSkipped += 1;
-          continue;
-        }
-        await prisma.slot.create({ data: { roomId: room.id, startsAt, endsAt } });
-        result.slotsCreated += 1;
-      }
+    // Слоти кімнати, що зачіпають увесь проміжок демо-seed, — одним запитом, а не запитом на кожен
+    // слот: так seed не тримає SQLite сотнями дрібних запитів.
+    const existing = await prisma.slot.findMany({
+      where: { roomId: room.id, startsAt: { lt: last.endsAt }, endsAt: { gt: first.startsAt } },
+      select: { startsAt: true, endsAt: true },
+    });
+    // Перетин із будь-яким слотом кімнати (BR-13) — і повторний запуск, і слот, створений вручну.
+    const free = candidates.filter(
+      (slot) => !existing.some((other) => slot.startsAt < other.endsAt && other.startsAt < slot.endsAt),
+    );
+    result.slotsSkipped += candidates.length - free.length;
+    if (free.length > 0) {
+      await prisma.slot.createMany({ data: free.map((slot) => ({ roomId: room.id, ...slot })) });
+      result.slotsCreated += free.length;
     }
   }
 
