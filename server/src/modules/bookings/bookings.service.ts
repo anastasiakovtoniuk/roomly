@@ -119,10 +119,11 @@ export async function createBooking(userId: string, slotId: string): Promise<Boo
   return { booking: toApiBooking(record), serverTime: serverTime.toISOString() };
 }
 
-// Q12 [Пропозиція] api_spec.md §7: upcoming — живий статус і слот ще не завершився (поточне
-// бронювання теж тут, для таймера US-5.3); past — усі інші власні. Межа змінюється лише тут.
+// Q12 [Рішення команди] api_spec.md §7: upcoming — живий статус і слот ще не почався (US-4.2-AC-01);
+// past — усі інші власні, зокрема бронювання, що вже триває. Межа змінюється лише тут і та сама,
+// що в списку вільних слотів (startsAt > now).
 function upcomingWhere(at: Date): Prisma.BookingWhereInput {
-  return { status: { in: [...LIVE_BOOKING_STATUSES] }, slot: { endsAt: { gt: at } } };
+  return { status: { in: [...LIVE_BOOKING_STATUSES] }, slot: { startsAt: { gt: at } } };
 }
 
 // US-4.2, US-X.3: лише бронювання користувача сесії (BR-8).
@@ -157,7 +158,7 @@ export async function getMyBooking(userId: string, bookingId: string): Promise<B
 
 // US-4.3: одне умовне оновлення active → cancelled_by_student лише для власного запису (BR-6, ADR-0006).
 // Статус наперед не читається: паралельне повторне скасування чи інший перехід просто не оновить рядок.
-// Q07 [Пропозиція]: бронювання, що вже почалося, теж скасовується, поки воно active.
+// Q07 [Рішення команди]: бронювання, що вже почалося, теж скасовується, поки воно active.
 // Ліниве автоскасування не викликається: у сценарії booking_flow.md воно вимкнене.
 export async function cancelMyBooking(userId: string, bookingId: string): Promise<BookingResponse> {
   const serverTime = now();
