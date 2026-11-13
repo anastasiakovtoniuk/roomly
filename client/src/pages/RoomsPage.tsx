@@ -28,7 +28,7 @@ export function RoomsPage() {
   const [slotsState, setSlotsState] = useState<SlotsState | null>(null);
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
   const [bookingError, setBookingError] = useState<unknown>(null);
-  const [uncertainSlotId, setUncertainSlotId] = useState<string | null>(null);
+  const [uncertainSlotIds, setUncertainSlotIds] = useState<ReadonlySet<string>>(() => new Set());
   // Синхронний замок не дає двом клікам надіслати POST до наступного render.
   const bookingLock = useRef(false);
   const operationVersion = useRef(0);
@@ -98,7 +98,6 @@ export function RoomsPage() {
     setRoomId(nextRoomId);
     setSlotsState(null);
     setBookingError(null);
-    setUncertainSlotId(null);
   }
 
   function selectDate(nextDate: string) {
@@ -106,7 +105,6 @@ export function RoomsPage() {
     setDate(nextDate);
     setSlotsState(null);
     setBookingError(null);
-    setUncertainSlotId(null);
   }
 
   function refreshSlots() {
@@ -119,7 +117,7 @@ export function RoomsPage() {
     if (
       bookingLock.current ||
       !canBook ||
-      slot.id === uncertainSlotId ||
+      uncertainSlotIds.has(slot.id) ||
       currentSlots?.kind !== 'ready' ||
       slot.roomId !== selectedRoomId ||
       !currentSlots.data.slots.some((available) => available.id === slot.id)
@@ -140,7 +138,7 @@ export function RoomsPage() {
       setBookingError(error);
       if (error instanceof NetworkError) {
         // Результат POST невідомий: повтор блокується, пропонуємо перевірити власні записи.
-        setUncertainSlotId(slot.id);
+        setUncertainSlotIds((current) => new Set(current).add(slot.id));
       } else if (
         error instanceof ApiError &&
         ['SLOT_ALREADY_BOOKED', 'SLOT_NOT_BOOKABLE', 'SLOT_NOT_FOUND'].includes(error.code)
@@ -259,12 +257,15 @@ export function RoomsPage() {
             {bookingError !== null && (
               <div className={styles.bookingError}>
                 <ErrorMessage error={bookingError} />
-                {bookingError instanceof NetworkError && (
-                  <Link className={styles.checkBookings} to="/bookings">
-                    Перевірити мої бронювання
-                  </Link>
-                )}
               </div>
+            )}
+            {uncertainSlotIds.size > 0 && (
+              <p className={styles.notice} role="status">
+                Результат попереднього бронювання ще невідомий.{' '}
+                <Link className={styles.checkBookings} to="/bookings">
+                  Перевірити мої бронювання
+                </Link>
+              </p>
             )}
             {!date ? (
               <EmptyState title="Обери дату зустрічі" />
@@ -289,7 +290,7 @@ export function RoomsPage() {
                     {canBook && (
                       <button
                         type="button"
-                        disabled={isBooking || slot.id === uncertainSlotId}
+                        disabled={isBooking || uncertainSlotIds.has(slot.id)}
                         onClick={() => void handleBooking(slot)}
                       >
                         {bookingSlotId === slot.id ? 'Бронюємо…' : 'Забронювати'}
