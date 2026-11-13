@@ -3,6 +3,7 @@ import { AuthRoute } from './auth/AuthRoute';
 import { Layout } from './components/Layout';
 import { EmptyState } from './components/EmptyState';
 import { PendingPage } from './pages/PendingPage';
+import { RoomsPage } from './pages/RoomsPage';
 
 export function App() {
   return (
@@ -14,7 +15,7 @@ export function App() {
           <Route path="register" element={<PendingPage title="Реєстрація" />} />
         </Route>
         <Route element={<AuthRoute />}>
-          <Route path="rooms" element={<PendingPage title="Навчальні кімнати" />} />
+          <Route path="rooms" element={<RoomsPage />} />
         </Route>
         <Route element={<AuthRoute studentOnly />}>
           <Route path="bookings" element={<PendingPage title="Мої бронювання" />} />

@@ -17,7 +17,7 @@ Roomly допомагає студентам бронювати навчальн
 
 Репозиторій містить документацію, технічні контракти (`docs/contracts/`) і **Walking Skeleton без бізнес-логіки**: npm workspaces, сервер з `GET /api/health` і єдиним обробником помилок, схему Prisma й першу міграцію за контрактом, seed адміністратора, клієнт-заглушку, тести, лінтер, форматер і CI. На сервері реалізовано автентифікацію (US-1.2, US-X.1a, US-X.1b: реєстрація, вхід, вихід, сесії), каталог кімнат з вільними слотами (US-1.3, US-2.1…2.4), створення бронювання із захистом BR-1 у сховищі (US-3.1, US-3.4, SYS-AC-06), а також власні бронювання студента: список, деталі й скасування (US-4.2, US-X.3, US-3.2a/b, US-4.3); автоскасування не підключене; інші User Story ще не реалізовано. Усі **ADR-0001…ADR-0008 мають статус «Запропоновано»**.
 
-У клієнті додано основу #10: маршрути й захист доступу, контекст сесії, типізовані API-функції та спільні компоненти. Форми входу/реєстрації, каталог і власні бронювання поки замінені `PendingPage` (#11–#13); повного сценарію через UI ще немає.
+У клієнті додано основу #10: маршрути й захист доступу, контекст сесії, типізовані API-функції та спільні компоненти. Каталог #12 показує кімнати й слоти на дату та створює бронювання з переходом до деталей. Форми входу/реєстрації й власні бронювання поки замінені `PendingPage` (#11/#13); повного сценарію через UI ще немає.
 
 Перед змінами прочитай:
 
@@ -80,13 +80,14 @@ Roomly допомагає студентам бронювати навчальн
 | `server/src/middleware/validate.ts` | Перевірка `params`/`query`/`body` схемами Zod із `shared/`; невдача — `VALIDATION_ERROR` з `details.fields` |
 | `server/src/db/prisma.ts` | Клієнт Prisma з адаптером better-sqlite3 |
 | `server/src/generated/` | Згенерований клієнт Prisma; не редагувати, не комітити |
-| `server/test/` | Vitest + Supertest; окрема `prisma/test.db`, створена міграціями. `clientApi.test.ts` тимчасово перевіряє чистий клієнтський транспорт тут на наявному Vitest; DOM-тести потребуватимуть окремого налаштування в `client/` |
+| `server/test/` | Vitest + Supertest; окрема `prisma/test.db`, створена міграціями. `clientApi.test.ts` і `clientDateTime.test.ts` тимчасово перевіряють чисту логіку клієнта тут на наявному Vitest; це допоміжні перевірки, а не повне проходження AC через UI. DOM-тести потребуватимуть окремого налаштування в `client/` |
 | `client/src/api/http.ts` | Єдина обгортка над fetch: `ApiError` (код із сервера) і `NetworkError` |
 | `client/src/api/` | `auth.ts`, `rooms.ts`, `bookings.ts` — типізовані функції на контрактах `shared/`; `errorMessages.ts` — тексти за машинним кодом |
 | `client/src/auth/` | `AuthProvider`/`useAuth`: відновлення сесії через `/auth/me`, вхід, реєстрація й вихід; `AuthRoute` — захист маршрутів |
 | `client/src/components/` | `Layout`, `Loader`, `ErrorMessage`, `EmptyState`; стилі через CSS Modules |
-| `client/src/App.tsx` | Маршрути `/login`, `/register`, `/rooms`, `/bookings`, `/bookings/:id`; для екранів #11–#13 поки `PendingPage` |
-| `client/src/pages/` | Екрани; `PendingPage` — місця для наступних задач, `HomePage` — початкова заглушка каркаса |
+| `client/src/App.tsx` | Маршрути `/login`, `/register`, `/rooms`, `/bookings`, `/bookings/:id`; `/rooms` — `RoomsPage`, для #11/#13 поки `PendingPage` |
+| `client/src/pages/` | `RoomsPage` — каталог, дата, слоти й створення бронювання; `PendingPage` — місця для наступних задач, `HomePage` — початкова заглушка каркаса |
+| `client/src/lib/dateTime.ts` | Дата запиту й відображення часу в поясі університету; Vite передає лише публічний `APP_TIMEZONE` як константу збірки, решта `.env` не потрапляє у браузер |
 | `.github/workflows/ci.yml` | lint, format:check, typecheck, test, build |
 | `.github/workflows/ai-review.yml` | ШІ-рев'ю кожного PR за правилами `prompts/5.3_ai_code_review.md`; секрет `CLAUDE_CODE_OAUTH_TOKEN` |
 | `.github/pull_request_template.md` | Шаблон опису Pull Request |
