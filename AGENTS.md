@@ -80,7 +80,7 @@ Roomly допомагає студентам бронювати навчальн
 | `server/src/middleware/validate.ts` | Перевірка `params`/`query`/`body` схемами Zod із `shared/`; невдача — `VALIDATION_ERROR` з `details.fields` |
 | `server/src/db/prisma.ts` | Клієнт Prisma з адаптером better-sqlite3 |
 | `server/src/generated/` | Згенерований клієнт Prisma; не редагувати, не комітити |
-| `server/test/` | Vitest + Supertest; окрема `prisma/test.db`, створена міграціями |
+| `server/test/` | Vitest + Supertest; окрема `prisma/test.db`, створена міграціями. `clientApi.test.ts` тимчасово перевіряє чистий клієнтський транспорт тут на наявному Vitest; DOM-тести потребуватимуть окремого налаштування в `client/` |
 | `client/src/api/http.ts` | Єдина обгортка над fetch: `ApiError` (код із сервера) і `NetworkError` |
 | `client/src/api/` | `auth.ts`, `rooms.ts`, `bookings.ts` — типізовані функції на контрактах `shared/`; `errorMessages.ts` — тексти за машинним кодом |
 | `client/src/auth/` | `AuthProvider`/`useAuth`: відновлення сесії через `/auth/me`, вхід, реєстрація й вихід; `AuthRoute` — захист маршрутів |
