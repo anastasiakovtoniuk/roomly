@@ -24,9 +24,7 @@ export function LoginPage() {
         <p className={styles.intro}>Увійди, щоб бронювати навчальні кімнати для своєї команди.</p>
       </div>
       <form className={styles.form} noValidate onSubmit={(event) => void handleSubmit(event)}>
-        <div ref={alertRef} className={styles.alert} tabIndex={-1}>
-          {formError !== null && <ErrorMessage error={formError} />}
-        </div>
+        {formError !== null && <ErrorMessage ref={alertRef} error={formError} />}
         <TextField
           {...field('email')}
           label="Пошта"

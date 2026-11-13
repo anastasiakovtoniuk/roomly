@@ -26,9 +26,12 @@ export function fieldMessage(field: AuthField, reason: string, value: string): s
       return reason === 'too_big' ? 'Пошта задовга.' : 'Введи пошту у форматі name@example.com.';
     case 'password':
       if (reason === 'too_small') return `Пароль має містити щонайменше ${PASSWORD_MIN_LENGTH} символів.`;
-      // Межа рахується в байтах UTF-8 (Q08), тому кириличний пароль упирається в неї раніше.
-      if (reason === 'too_big')
-        return 'Пароль задовгий. Літери кирилиці займають більше місця, ніж латиниця.';
+      // Межа рахується в байтах UTF-8 (Q08): про кирилицю згадуємо лише тоді, коли вона є в паролі.
+      if (reason === 'too_big') {
+        return [...value].some((char) => (char.codePointAt(0) ?? 0) > 0x7f)
+          ? 'Пароль задовгий. Скороти його: літери кирилиці займають удвічі більше місця, ніж латиниця.'
+          : 'Пароль задовгий. Скороти його.';
+      }
       return 'Перевір пароль.';
   }
 }
@@ -52,11 +55,12 @@ export function collectFieldErrors<F extends AuthField>(
   return { errors, complete };
 }
 
-// Помилки клієнтської перевірки Zod у тому самому вигляді, що й details.fields сервера.
+// Помилки клієнтської перевірки Zod у тому самому вигляді, що й details.fields сервера;
+// порожній шлях (перевірка всього об'єкта) — `body`, як у error_format.md §1.
 export function issuesToFields(
   issues: readonly { path: readonly PropertyKey[]; code: string }[],
 ): ValidationFieldError[] {
-  return issues.map((issue) => ({ path: issue.path.map(String).join('.'), reason: issue.code }));
+  return issues.map((issue) => ({ path: issue.path.map(String).join('.') || 'body', reason: issue.code }));
 }
 
 // details приходить із мережі, тому структуру перевіряємо, а не приводимо типом.

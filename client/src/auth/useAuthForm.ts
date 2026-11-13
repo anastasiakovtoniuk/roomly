@@ -31,7 +31,8 @@ export function useAuthForm<F extends AuthField, B>({
 }: {
   initialValues: Record<F, string>;
   schema: SafeParser<B>;
-  submit: (body: B) => Promise<unknown>;
+  // Values форми теж приймаються: якщо клієнтська схема не прив'язала помилку до поля, вирішує сервер.
+  submit: (body: B | Record<F, string>) => Promise<unknown>;
   onSuccess: () => void;
   // Коди відмови, які стосуються одного поля (наприклад, зайнята пошта), показуються біля нього.
   // NoInfer: набір полів визначають лише initialValues, а не цей перелік.
@@ -47,7 +48,16 @@ export function useAuthForm<F extends AuthField, B>({
   const lock = useRef(false);
   const inputs = useRef<Partial<Record<F, HTMLInputElement | null>>>({});
   const alertRef = useRef<HTMLDivElement>(null);
+  // Пізня відповідь після переходу на інший екран не повинна його змінювати.
+  const mounted = useRef(false);
   const order = Object.keys(initialValues) as F[];
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!focusRequest) return;
@@ -55,29 +65,31 @@ export function useAuthForm<F extends AuthField, B>({
     target?.focus();
   }, [focusRequest]);
 
-  function showFieldErrors(errors: FieldErrors<F>) {
+  // Фокус на першому полі з помилкою; якщо таких немає — на загальному повідомленні.
+  function showErrors(errors: FieldErrors<F>, error: unknown = null) {
     setFieldErrors(errors);
+    setFormError(error);
     const first = firstInvalidField(order, errors);
     if (first) setFocusRequest({ target: first });
+    else if (error !== null) setFocusRequest({ target: 'form' });
   }
 
-  function showFailure(error: unknown) {
+  // submitted — значення на момент відправки: поля під час запиту лише для читання.
+  function showFailure(error: unknown, submitted: Record<F, string>) {
     if (error instanceof ApiError) {
       if (error.code === 'VALIDATION_ERROR') {
-        const { errors, complete } = collectFieldErrors(readValidationFields(error.details), values);
-        if (complete) {
-          showFieldErrors(errors);
-          return;
-        }
+        const { errors, complete } = collectFieldErrors(readValidationFields(error.details), submitted);
+        // Помилку поза полями форми не ховаємо: показуємо її разом із помилками полів.
+        showErrors(errors, complete ? null : error);
+        return;
       }
       const field = fieldForCode[error.code];
       if (field) {
-        showFieldErrors({ [field]: getErrorMessage(error) } as FieldErrors<F>);
+        showErrors({ [field]: getErrorMessage(error) } as FieldErrors<F>);
         return;
       }
     }
-    setFormError(error);
-    setFocusRequest({ target: 'form' });
+    showErrors({}, error);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -86,25 +98,29 @@ export function useAuthForm<F extends AuthField, B>({
     setFormError(null);
 
     // Клієнтська перевірка лише для зручності: сервер перевіряє ту саму схему обов'язково.
-    const parsed = schema.safeParse(values);
+    const submitted = values;
+    const parsed = schema.safeParse(submitted);
     if (!parsed.success) {
-      showFieldErrors(collectFieldErrors(issuesToFields(parsed.error.issues), values).errors);
-      return;
+      const { errors } = collectFieldErrors(issuesToFields(parsed.error.issues), submitted);
+      if (firstInvalidField(order, errors)) {
+        showErrors(errors);
+        return;
+      }
     }
 
     lock.current = true;
     setSubmitting(true);
     setFieldErrors({});
     try {
-      await submit(parsed.data);
+      await submit(parsed.success ? parsed.data : submitted);
     } catch (error) {
-      showFailure(error);
+      if (mounted.current) showFailure(error, submitted);
       return;
     } finally {
       lock.current = false;
       setSubmitting(false);
     }
-    onSuccess();
+    if (mounted.current) onSuccess();
   }
 
   function field(name: F) {
@@ -113,6 +129,7 @@ export function useAuthForm<F extends AuthField, B>({
       name,
       value: values[name],
       error: fieldErrors[name],
+      readOnly: submitting,
       ref: (element: HTMLInputElement | null) => {
         inputs.current[name] = element;
       },

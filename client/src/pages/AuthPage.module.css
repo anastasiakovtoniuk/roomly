@@ -22,14 +22,6 @@
   background: var(--color-surface);
 }
 
-.alert:focus {
-  outline: none;
-}
-
-.alert:empty {
-  display: none;
-}
-
 .submit {
   width: 100%;
   margin-top: 0.25rem;

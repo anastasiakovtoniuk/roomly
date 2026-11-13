@@ -40,7 +40,16 @@ describe('Форми входу й реєстрації: помилки полі
       email: 'olia@example.com',
       password: 'ж'.repeat(37),
     });
-    expect(result?.errors.password).toMatch(/задовгий/);
+    expect(result?.errors.password).toMatch(/задовгий.*кирилиці/);
+  });
+
+  it('US-1.2-AC-01: задовгий латинський пароль не отримує підказки про кирилицю', () => {
+    const result = clientErrors(RegisterBody, {
+      name: 'Оля',
+      email: 'olia@example.com',
+      password: 'a'.repeat(80),
+    });
+    expect(result?.errors.password).toBe('Пароль задовгий. Скороти його.');
   });
 
   it('US-1.2-AC-01: валідні дані проходять клієнтську перевірку з нормалізованою поштою', () => {
@@ -82,6 +91,25 @@ describe('Форми входу й реєстрації: помилки полі
       false,
     );
     expect(collectFieldErrors([], values).complete).toBe(false);
+  });
+
+  it('US-1.2-AC-01: змішані помилки сервера зберігають помилки полів і позначаються неповними', () => {
+    const values = { email: 'olia@', password: 'password1' };
+    const result = collectFieldErrors(
+      [
+        { path: 'email', reason: 'invalid_format' },
+        { path: 'body', reason: 'invalid_content_type' },
+      ],
+      values,
+    );
+    expect(result).toEqual({
+      complete: false,
+      errors: { email: 'Введи пошту у форматі name@example.com.' },
+    });
+  });
+
+  it('US-1.2-AC-01: помилка всього об’єкта зі схеми має шлях body, як на сервері', () => {
+    expect(issuesToFields([{ path: [], code: 'custom' }])).toEqual([{ path: 'body', reason: 'custom' }]);
   });
 
   it('US-1.2-AC-01: пошкоджені details.fields з мережі ігноруються без винятку', () => {

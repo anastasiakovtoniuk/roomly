@@ -26,9 +26,7 @@ export function RegisterPage() {
         <p className={styles.intro}>Створи акаунт студента особистою поштою — без університетського входу.</p>
       </div>
       <form className={styles.form} noValidate onSubmit={(event) => void handleSubmit(event)}>
-        <div ref={alertRef} className={styles.alert} tabIndex={-1}>
-          {formError !== null && <ErrorMessage error={formError} />}
-        </div>
+        {formError !== null && <ErrorMessage ref={alertRef} error={formError} />}
         <TextField {...field('name')} label="Імʼя" type="text" autoComplete="name" required />
         <TextField
           {...field('email')}
