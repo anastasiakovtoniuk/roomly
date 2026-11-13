@@ -107,7 +107,7 @@ npm run dev
 
 ### Основа клієнта (#10)
 
-Клієнт має маршрути `/login`, `/register`, `/rooms`, `/bookings`, `/bookings/:id`. Після відкриття він перевіряє сесію через `/api/auth/me`; гість на захищеному маршруті переходить на `/login`. `/rooms` уже має каталог (#12), `/login` і `/register` — форми входу й реєстрації (#11); сторінки власних бронювань поки замінені `PendingPage` (#13).
+Клієнт має маршрути `/login`, `/register`, `/rooms`, `/bookings`, `/bookings/:id`. Після відкриття він перевіряє сесію через `/api/auth/me`; гість на захищеному маршруті переходить на `/login`. `/rooms` уже має каталог (#12), `/login` і `/register` — форми входу й реєстрації (#11); `/bookings` і `/bookings/:id` показують власні бронювання, деталі з дедлайном і скасування (#13).
 
 Для підключення екранів використовуйте `useAuth` з `client/src/auth/AuthContext.tsx`: `status`, `user`, `error`, `refresh()`, `login(body)`, `register(body)`, `logout()`. Вхід і реєстрація повертають користувача та оновлюють контекст; після успіху форма переходить на `/rooms`. Усі запити йдуть через функції `client/src/api/auth.ts`, `rooms.ts`, `bookings.ts`; тексти помилок — через `ErrorMessage` або `getErrorMessage`, а не через серверний `message`. Компоненти `Loader`, `EmptyState` і `Layout` спільні для екранів.
 
