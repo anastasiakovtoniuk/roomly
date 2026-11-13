@@ -1,9 +1,12 @@
 import {
   BOOKING_STATUSES,
   GRACE_PERIOD_MINUTES,
+  LIVE_BOOKING_STATUSES,
   USER_ROLES,
   type Booking,
+  type BookingListResponse,
   type BookingResponse,
+  type BookingScope,
   type BookingStatus,
   type UserRole,
 } from '@roomly/shared';
@@ -113,5 +116,65 @@ export async function createBooking(userId: string, slotId: string): Promise<Boo
     throw err;
   }
 
+  return { booking: toApiBooking(record), serverTime: serverTime.toISOString() };
+}
+
+// Q12 [Пропозиція] api_spec.md §7: upcoming — живий статус і слот ще не завершився (поточне
+// бронювання теж тут, для таймера US-5.3); past — усі інші власні. Межа змінюється лише тут.
+function upcomingWhere(at: Date): Prisma.BookingWhereInput {
+  return { status: { in: [...LIVE_BOOKING_STATUSES] }, slot: { endsAt: { gt: at } } };
+}
+
+// US-4.2, US-X.3: лише бронювання користувача сесії (BR-8).
+export async function listMyBookings(userId: string, scope: BookingScope): Promise<BookingListResponse> {
+  const serverTime = now();
+  const upcoming = upcomingWhere(serverTime);
+  const direction = scope === 'upcoming' ? 'asc' : 'desc';
+
+  const records = await prisma.booking.findMany({
+    where: { userId, ...(scope === 'upcoming' ? upcoming : { NOT: upcoming }) },
+    select: BOOKING_FIELDS,
+    orderBy: [{ slot: { startsAt: direction } }, { createdAt: direction }],
+  });
+
+  return { bookings: records.map(toApiBooking), serverTime: serverTime.toISOString() };
+}
+
+// Чуже й неіснуюче бронювання дають однакову відповідь, щоб не розкривати чужі записи (BR-8, US-X.1a-AC-03).
+function bookingNotFound(): AppError {
+  return new AppError('BOOKING_NOT_FOUND', 'Бронювання не знайдено');
+}
+
+// US-3.2a, US-3.2b.
+export async function getMyBooking(userId: string, bookingId: string): Promise<BookingResponse> {
+  const serverTime = now();
+  const record = await prisma.booking.findFirst({ where: { id: bookingId, userId }, select: BOOKING_FIELDS });
+  if (!record) {
+    throw bookingNotFound();
+  }
+  return { booking: toApiBooking(record), serverTime: serverTime.toISOString() };
+}
+
+// US-4.3: одне умовне оновлення active → cancelled_by_student лише для власного запису (BR-6, ADR-0006).
+// Статус наперед не читається: паралельне повторне скасування чи інший перехід просто не оновить рядок.
+// Q07 [Пропозиція]: бронювання, що вже почалося, теж скасовується, поки воно active.
+// Ліниве автоскасування не викликається: у сценарії booking_flow.md воно вимкнене.
+export async function cancelMyBooking(userId: string, bookingId: string): Promise<BookingResponse> {
+  const serverTime = now();
+  const { count } = await prisma.booking.updateMany({
+    where: { id: bookingId, userId, status: 'active' },
+    data: { status: 'cancelled_by_student', cancelledAt: serverTime },
+  });
+
+  const record = await prisma.booking.findFirst({ where: { id: bookingId, userId }, select: BOOKING_FIELDS });
+  if (!record) {
+    throw bookingNotFound();
+  }
+  if (count === 0) {
+    // Скасований запис не відновлюється, підтверджений не скасовується (FB-1, BR-9).
+    throw new AppError('BOOKING_STATUS_CONFLICT', 'Дію неможливо виконати для бронювання в цьому статусі', {
+      currentStatus: record.status,
+    });
+  }
   return { booking: toApiBooking(record), serverTime: serverTime.toISOString() };
 }
