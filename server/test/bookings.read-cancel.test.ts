@@ -4,6 +4,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   GRACE_PERIOD_MINUTES,
+  LIVE_BOOKING_STATUSES,
   SESSION_COOKIE_NAME,
   type AvailableSlotListResponse,
   type BookingListResponse,
@@ -143,14 +144,45 @@ describe('GET /api/bookings?scope=upcoming', () => {
     });
   });
 
-  it('US-4.2-AC-01 Q12 [Пропозиція]: поточне бронювання (слот почався, не завершився) лишається в upcoming', async () => {
-    const cookie = await studentCookie();
-    const booking = await bookSlot(cookie, (await createSlot((await createRoom()).id, TOMORROW_10)).id);
-    setClock(() => new Date('2026-11-03T08:30:00.000Z'));
+  it.each(
+    LIVE_BOOKING_STATUSES.flatMap((status) => [
+      { status, at: '2026-11-03T07:59:59.999Z', expectedScope: 'upcoming', boundary: 'за 1 мс до початку' },
+      { status, at: TOMORROW_10, expectedScope: 'past', boundary: 'рівно на початку' },
+      { status, at: '2026-11-03T08:30:00.000Z', expectedScope: 'past', boundary: 'під час слота' },
+      { status, at: '2026-11-03T09:00:00.000Z', expectedScope: 'past', boundary: 'рівно в кінці слота' },
+      { status, at: '2026-11-03T09:00:00.001Z', expectedScope: 'past', boundary: 'після завершення' },
+    ]),
+  )(
+    'US-4.2-AC-01 US-X.3-AC-01 Q12: $status $boundary є лише в $expectedScope без зміни статусу',
+    async ({ status, at, expectedScope }) => {
+      const cookie = await studentCookie();
+      const booking = await bookSlot(cookie, (await createSlot((await createRoom()).id, TOMORROW_10)).id);
+      // Check-in поза сценарієм: confirmed задається напряму для перевірки обох живих статусів.
+      if (status === 'confirmed') {
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { status, confirmedAt: NOW, confirmedById: await userIdOf(cookie) },
+        });
+      }
+      setClock(() => new Date(at));
 
-    expect(listedIds(await list(cookie, 'upcoming'))).toEqual([booking.id]);
-    expect(listedIds(await list(cookie, 'past'))).toEqual([]);
-  });
+      const upcoming = await list(cookie, 'upcoming');
+      const past = await list(cookie, 'past');
+
+      expect(upcoming.status).toBe(200);
+      expect(past.status).toBe(200);
+      expect(listedIds(upcoming)).toEqual(expectedScope === 'upcoming' ? [booking.id] : []);
+      expect(listedIds(past)).toEqual(expectedScope === 'past' ? [booking.id] : []);
+      expect((upcoming.body as BookingListResponse).serverTime).toBe(at);
+      expect((past.body as BookingListResponse).serverTime).toBe(at);
+      const stored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+      expect(stored.status).toBe(status);
+      expect(stored.cancelledAt).toBeNull();
+      const detail = await details(cookie, booking.id);
+      expect(detail.status).toBe(200);
+      expect((detail.body as BookingResponse).booking.status).toBe(status);
+    },
+  );
 
   it('US-4.2-AC-02 чужі майбутні бронювання не потрапляють у список', async () => {
     const room = await createRoom();
@@ -388,7 +420,7 @@ describe('POST /api/bookings/:bookingId/cancel', () => {
     expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status).toBe('confirmed');
   });
 
-  it('Q07 [Пропозиція]: активне бронювання, що вже почалося, студент скасовує', async () => {
+  it('US-4.3-AC-02 Q07 [Рішення команди]: активне бронювання, що вже почалося, студент скасовує', async () => {
     const cookie = await studentCookie();
     const booking = await bookSlot(cookie, (await createSlot((await createRoom()).id, TOMORROW_10)).id);
     setClock(() => new Date('2026-11-03T08:30:00.000Z'));

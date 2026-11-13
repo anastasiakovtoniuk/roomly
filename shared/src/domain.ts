@@ -18,7 +18,7 @@ export type BookingScope = (typeof BOOKING_SCOPES)[number];
 // [Гіпотеза] H01: 15 хв; єдина константа для всіх кімнат — рішення команди.
 export const GRACE_PERIOD_MINUTES = 15;
 
-// TA-14; відкрите питання Q08.
+// TA-14; [Рішення команди] Q08 для сценарію booking_flow.md (issue #25).
 export const PASSWORD_MIN_LENGTH = 8;
 
 export const SESSION_COOKIE_NAME = 'roomly_session';

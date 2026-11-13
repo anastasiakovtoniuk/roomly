@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { BOOKING_SCOPES, PASSWORD_MIN_LENGTH } from './domain';
 
-// [Пропозиція] Q08: межа імені.
+// [Рішення команди] Q08 для сценарію booking_flow.md (issue #25): межа імені.
 const NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;
 // [Рішення команди] Q08: bcrypt ігнорує все після 72-го байта, тому межа рахується в байтах UTF-8,

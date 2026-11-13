@@ -67,8 +67,7 @@ function toApiBooking(record: BookingRecord): Booking {
 }
 
 // Єдине місце обчислення дедлайну (BR-3, data_model.md §3.4). Розпочатий слот не бронюється
-// (G1/Q04 варіант «а», booking_flow.md), тож дедлайн завжди від початку слота. Якщо команда
-// обере варіант «б», змінюється лише ця функція.
+// (G1/Q04 варіант «а», [Рішення команди] для booking_flow.md), тож дедлайн завжди від початку слота.
 export function computeDeadline(slotStartsAt: Date): Date {
   return new Date(slotStartsAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000);
 }
@@ -119,10 +118,10 @@ export async function createBooking(userId: string, slotId: string): Promise<Boo
   return { booking: toApiBooking(record), serverTime: serverTime.toISOString() };
 }
 
-// Q12 [Пропозиція] api_spec.md §7: upcoming — живий статус і слот ще не завершився (поточне
-// бронювання теж тут, для таймера US-5.3); past — усі інші власні. Межа змінюється лише тут.
+// Q12 [Рішення команди] для booking_flow.md: upcoming — живий статус і початок ще не настав;
+// past — усі інші власні, зокрема поточне бронювання й момент рівно на початку слота.
 function upcomingWhere(at: Date): Prisma.BookingWhereInput {
-  return { status: { in: [...LIVE_BOOKING_STATUSES] }, slot: { endsAt: { gt: at } } };
+  return { status: { in: [...LIVE_BOOKING_STATUSES] }, slot: { startsAt: { gt: at } } };
 }
 
 // US-4.2, US-X.3: лише бронювання користувача сесії (BR-8).
@@ -157,7 +156,7 @@ export async function getMyBooking(userId: string, bookingId: string): Promise<B
 
 // US-4.3: одне умовне оновлення active → cancelled_by_student лише для власного запису (BR-6, ADR-0006).
 // Статус наперед не читається: паралельне повторне скасування чи інший перехід просто не оновить рядок.
-// Q07 [Пропозиція]: бронювання, що вже почалося, теж скасовується, поки воно active.
+// Q07 [Рішення команди] для booking_flow.md: бронювання, що вже почалося, теж скасовується, поки воно active.
 // Ліниве автоскасування не викликається: у сценарії booking_flow.md воно вимкнене.
 export async function cancelMyBooking(userId: string, bookingId: string): Promise<BookingResponse> {
   const serverTime = now();
