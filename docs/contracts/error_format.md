@@ -16,7 +16,7 @@
 Валідація:
 
 ```json
-{ "error": { "code": "VALIDATION_ERROR", "message": "Некоректні дані запиту", "details": { "fields": [ { "path": "email", "reason": "invalid_email" }, { "path": "password", "reason": "too_short" } ] } } }
+{ "error": { "code": "VALIDATION_ERROR", "message": "Некоректні дані запиту", "details": { "fields": [ { "path": "email", "reason": "invalid_format" }, { "path": "password", "reason": "too_small" } ] } } }
 ```
 
 Конфлікт стану:
@@ -25,7 +25,7 @@
 { "error": { "code": "BOOKING_STATUS_CONFLICT", "message": "Дію неможливо виконати для бронювання в цьому статусі", "details": { "currentStatus": "auto_cancelled" } } }
 ```
 
-- `details.fields[].path` — шлях до поля (`name`, `equipment.1`, `query.date`); `reason` — машинна причина з переліку Zod **[Пропозиція]**.
+- `details.fields[].path` — шлях до поля: поля тіла без префікса (`name`, `equipment.1`), параметри шляху й запиту з префіксом (`params.roomId`, `query.date`); відсутнє чи нерозбірне тіло — `body`. `reason` — код помилки Zod 4 без змін (`invalid_type`, `invalid_format`, `invalid_value`, `too_small`, `too_big` тощо) **[Пропозиція]**; для нерозбірного JSON — `invalid_json`; для запиту зі зміною даних без `Content-Type: application/json` (api_spec.md §1, ADR-0005) — `invalid_content_type` **[Рішення команди]**.
 - **Клієнт показує текст за `code`**, а не за `message`. Тести (ADR-0008) перевіряють `code` і HTTP-статус. Дослівні тексти для користувача не фіксуються: це відкриті Q05, Q11, Q13, Q15.
 - Спільна обгортка `fetch` на клієнті (ADR-0002) розбирає це тіло для будь-якого статусу ≥ 400.
 

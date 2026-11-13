@@ -1,0 +1,217 @@
+.page {
+  min-width: 0;
+}
+
+.heading {
+  margin-bottom: 1.5rem;
+}
+
+.heading h1 {
+  margin-bottom: 0.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-muted);
+  max-width: 34rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.tab {
+  flex: 1 1 0;
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 0.875rem;
+}
+
+.tab[aria-selected='true'] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.note {
+  margin: 0 0 1rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.card,
+.details {
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cardHead h3,
+.cardHead h1 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.status {
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.confirmed {
+  border-color: var(--color-ok);
+  color: var(--color-ok);
+}
+
+.cancelled,
+.unknown {
+  color: var(--color-muted);
+}
+
+.meta {
+  margin: 0.5rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.when {
+  margin: 0.75rem 0 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.detailsLink {
+  display: inline-block;
+  padding-block: 0.65rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.facts div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.facts dt {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.timezone {
+  margin: 0 0 1.25rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.confirmBox {
+  padding: 1rem;
+  border: 1px solid var(--color-error);
+  border-radius: 0.75rem;
+}
+
+.confirmBox p {
+  margin: 0 0 0.75rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.actions button {
+  flex: 1 1 10rem;
+}
+
+.danger {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-on-accent);
+}
+
+.secondary {
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-accent);
+}
+
+.notice {
+  margin: 0 0 1rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.actionError {
+  margin-bottom: 1rem;
+}
+
+.back {
+  display: inline-block;
+  margin-top: 1rem;
+  padding-block: 0.65rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 38rem) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    min-width: 9rem;
+  }
+}

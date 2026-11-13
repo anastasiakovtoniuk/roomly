@@ -1,0 +1,36 @@
+.loader,
+.empty,
+.error {
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.loader {
+  color: var(--color-muted);
+}
+
+.empty h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.error {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.error p {
+  margin: 0;
+}
+
+.error button {
+  margin-top: 0.75rem;
+}

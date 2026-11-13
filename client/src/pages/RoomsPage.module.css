@@ -1,0 +1,264 @@
+.page {
+  min-width: 0;
+}
+
+.heading {
+  margin-bottom: 2rem;
+}
+
+.heading h1 {
+  margin-bottom: 0.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-muted);
+  max-width: 34rem;
+}
+
+.content {
+  display: grid;
+  gap: 2rem;
+}
+
+.content > section {
+  min-width: 0;
+}
+
+.sectionHeading,
+.cardHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sectionHeading {
+  margin-bottom: 1rem;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.count {
+  min-width: 1.75rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 2rem;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.rooms,
+.slots,
+.equipment {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.rooms {
+  display: grid;
+  gap: 1rem;
+}
+
+.roomCard {
+  height: 100%;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}
+
+.roomCard.selected {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.cardHeading {
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cardHeading h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.capacity {
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.location {
+  margin: 0.5rem 0 1rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.equipment {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+}
+
+.equipment li {
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.375rem;
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.noEquipment {
+  margin: 0 0 1.25rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.selectButton {
+  width: 100%;
+  margin-top: auto;
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 0.875rem;
+}
+
+.selected .selectButton {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.availability {
+  align-self: start;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+}
+
+.refreshButton {
+  padding-inline: 0.65rem;
+  border-color: var(--color-border);
+  color: var(--color-accent);
+  background: transparent;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.dateLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dateInput {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.timezone {
+  margin: 0.5rem 0 1.25rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.notice {
+  margin-block: 1rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.bookingError {
+  margin-bottom: 1rem;
+}
+
+.checkBookings {
+  display: inline-block;
+  padding-block: 0.65rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.slots {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block: 0.875rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.slotTime {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.slotDate {
+  margin: 0.2rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.slot button {
+  flex: 1 0 100%;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 38rem) {
+  .rooms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .slot button {
+    flex: 0 0 auto;
+  }
+}
+
+@media (min-width: 58rem) {
+  .content {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .availability {
+    position: sticky;
+    top: 1rem;
+  }
+}

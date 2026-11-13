@@ -1,7 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Route, Routes } from 'react-router';
-import { HomePage } from './pages/HomePage';
+import { BrowserRouter } from 'react-router';
+import { App } from './App';
+import { AuthProvider } from './auth/AuthContext';
 import './index.css';
 
 const root = document.getElementById('root');
@@ -12,10 +13,9 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        {/* Маршрути екранів студента й адміністратора додаються під час реалізації історій. */}
-        <Route path="*" element={<HomePage />} />
-      </Routes>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 );

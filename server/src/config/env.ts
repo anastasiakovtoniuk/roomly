@@ -17,3 +17,15 @@ function resolveDatabaseUrl(raw: string): string {
 export const databaseUrl = resolveDatabaseUrl(process.env.DATABASE_URL ?? 'file:./prisma/dev.db');
 
 export const serverPort = Number(process.env.SERVER_PORT ?? 3000);
+
+// Часовий пояс університету (G9, Europe/Kyiv — [Гіпотеза]): у ньому рахується «дата» слота.
+// Порожнє значення означає типовий пояс, як і відсутня змінна. Невідома зона зупиняє запуск одразу, а не дає хибні дати в кожній відповіді.
+function resolveTimeZone(raw: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: raw }).resolvedOptions().timeZone;
+  } catch {
+    throw new Error(`Некоректний APP_TIMEZONE: ${raw}`);
+  }
+}
+
+export const appTimezone = resolveTimeZone(process.env.APP_TIMEZONE || 'Europe/Kyiv');
