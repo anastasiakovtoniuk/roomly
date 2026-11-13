@@ -2,7 +2,9 @@ import { Link, Navigate, Route, Routes } from 'react-router';
 import { AuthRoute } from './auth/AuthRoute';
 import { Layout } from './components/Layout';
 import { EmptyState } from './components/EmptyState';
+import { LoginPage } from './pages/LoginPage';
 import { PendingPage } from './pages/PendingPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { RoomsPage } from './pages/RoomsPage';
 
 export function App() {
@@ -11,8 +13,8 @@ export function App() {
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/rooms" replace />} />
         <Route element={<AuthRoute guestOnly />}>
-          <Route path="login" element={<PendingPage title="Вхід" />} />
-          <Route path="register" element={<PendingPage title="Реєстрація" />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
         </Route>
         <Route element={<AuthRoute />}>
           <Route path="rooms" element={<RoomsPage />} />
