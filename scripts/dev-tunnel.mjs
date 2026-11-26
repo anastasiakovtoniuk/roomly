@@ -52,3 +52,10 @@ child.on('error', (err) => {
   fail(err.message);
 });
 child.on('exit', (code) => process.exit(code ?? 0));
+
+// Якщо `concurrently -k` чи Ctrl+C зупиняє обгортку, ngrok не повинен лишитися працювати: інакше він
+// займе статичний домен, і наступний запуск тунелю впаде з помилкою про активну сесію.
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => child.kill(signal));
+}
+process.on('exit', () => child.kill());
