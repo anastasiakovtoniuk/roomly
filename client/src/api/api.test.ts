@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createSlot, updateRoom } from './adminRooms';
 import { login, logout } from './auth';
 import { createBooking, listMyBookings } from './bookings';
 import { getErrorMessage } from './errorMessages';
@@ -155,5 +156,25 @@ describe('Клієнтський транспорт API', () => {
     vi.stubGlobal('fetch', fetch);
     await apiRequest('/auth/me', { headers: new Headers({ Accept: 'application/json' }) });
     expect(fetch.mock.calls[0]?.[1].headers.get('Accept')).toBe('application/json');
+  });
+  it('US-A.1b-AC-03: PATCH кімнати надсилає лише передані поля на шлях адмін-API', async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({ room: { id: 'room' } }));
+    vi.stubGlobal('fetch', fetch);
+    await updateRoom('room/1', { capacity: 10 });
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/admin/rooms/room%2F1',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ capacity: 10 }) }),
+    );
+  });
+
+  it('US-A.2-AC-01: слот створюється POST-запитом для обраної кімнати з часом UTC', async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({ slot: { id: 'slot' } }, { status: 201 }));
+    vi.stubGlobal('fetch', fetch);
+    const body = { startsAt: '2026-11-30T08:00:00.000Z', endsAt: '2026-11-30T09:00:00.000Z' };
+    await createSlot('room', body);
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/admin/rooms/room/slots',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(body) }),
+    );
   });
 });

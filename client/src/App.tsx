@@ -2,6 +2,7 @@ import { Link, Navigate, Route, Routes } from 'react-router';
 import { AuthRoute } from './auth/AuthRoute';
 import { Layout } from './components/Layout';
 import { EmptyState } from './components/EmptyState';
+import { AdminRoomsPage } from './pages/AdminRoomsPage';
 import { BookingDetailsPage } from './pages/BookingDetailsPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { LoginPage } from './pages/LoginPage';
@@ -23,6 +24,10 @@ export function App() {
         <Route element={<AuthRoute studentOnly />}>
           <Route path="bookings" element={<BookingsPage />} />
           <Route path="bookings/:id" element={<BookingDetailsPage />} />
+        </Route>
+        <Route element={<AuthRoute adminOnly />}>
+          <Route path="admin" element={<Navigate to="/admin/rooms" replace />} />
+          <Route path="admin/rooms" element={<AdminRoomsPage />} />
         </Route>
         <Route
           path="*"

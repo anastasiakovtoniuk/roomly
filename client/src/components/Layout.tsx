@@ -53,6 +53,12 @@ export function Layout() {
                 Мої бронювання
               </NavLink>
             )}
+            {/* Пункт «Адмін: бронювання» з'явиться разом із маршрутом #46. */}
+            {auth.user.role === 'admin' && (
+              <NavLink to="/admin/rooms" className={({ isActive }) => (isActive ? styles.active : undefined)}>
+                Адмін: кімнати
+              </NavLink>
+            )}
           </nav>
         )}
       </header>
