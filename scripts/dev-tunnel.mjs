@@ -3,7 +3,7 @@
 //
 // `node scripts/dev-tunnel.mjs --check` лише перевіряє налаштування (запускається перед стартом).
 // Без прапорця запускає `ngrok http` на порт клієнта зі статичним доменом з `.env`.
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,9 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const envFile = path.join(root, '.env');
 if (existsSync(envFile)) process.loadEnvFile(envFile);
+
+const NGROK_MISSING =
+  'команду `ngrok` не знайдено. Встановіть ngrok і виконайте `ngrok config add-authtoken <токен>` (див. README).';
 
 function fail(message) {
   console.error(`\nТунель не запущено: ${message}\n`);
@@ -30,6 +33,9 @@ if (!/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(domain) || !domain.includes('.')) 
 }
 
 if (process.argv.includes('--check')) {
+  // Перевіряємо ngrok до старту серверів: інакше помилка з'явилась би лише всередині concurrently,
+  // коли сервер і клієнт уже запущені.
+  if (spawnSync('ngrok', ['version'], { stdio: 'ignore' }).error?.code === 'ENOENT') fail(NGROK_MISSING);
   console.log(`Тунель: https://${domain} → http://localhost:${process.env.CLIENT_PORT ?? '5173'}`);
   process.exit(0);
 }
@@ -42,11 +48,7 @@ const child = spawn('ngrok', ['http', port, '--url', `https://${domain}`], {
 });
 
 child.on('error', (err) => {
-  if (err.code === 'ENOENT') {
-    fail(
-      'команду `ngrok` не знайдено. Встановіть ngrok і виконайте `ngrok config add-authtoken <токен>` (див. README).',
-    );
-  }
+  if (err.code === 'ENOENT') fail(NGROK_MISSING);
   fail(err.message);
 });
 child.on('exit', (code) => process.exit(code ?? 0));
