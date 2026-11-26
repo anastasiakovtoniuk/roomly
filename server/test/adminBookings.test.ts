@@ -68,6 +68,16 @@ function own(body: AdminBookingListResponse, ids: string[]): AdminBooking[] {
   return body.bookings.filter((booking) => ids.includes(booking.id));
 }
 
+// Бронювання з відповіді за id. Відсутність — явне падіння з id, а не undefined, який далі
+// перевірявся б через `?.` і давав невиразне повідомлення.
+function bookingIn(body: AdminBookingListResponse, id: string): AdminBooking {
+  const found = body.bookings.find((booking) => booking.id === id);
+  if (found === undefined) {
+    throw new Error(`Бронювання ${id} немає у відповіді GET /api/admin/bookings`);
+  }
+  return found;
+}
+
 describe('GET /api/admin/bookings', () => {
   useClock(IN_GRACE);
 
@@ -83,16 +93,15 @@ describe('GET /api/admin/bookings', () => {
     expect(res.status).toBe(200);
     const body = res.body as AdminBookingListResponse;
     expect(body.serverTime).toBe(IN_GRACE.toISOString());
-    const users = await prisma.user.findMany({ where: { id: { in: [olena.userId, petro.userId] } } });
     for (const [booking, userId] of [
       [first, olena.userId],
       [second, petro.userId],
     ] as const) {
-      const found = body.bookings.find((b) => b.id === booking.id);
-      const user = users.find((u) => u.id === userId);
-      expect(found, booking.id).toBeDefined();
-      // Лише три поля власника: без passwordHash, ролі й сесій (BR-8).
-      expect(found?.student).toEqual({ id: user?.id, name: user?.name, email: user?.email });
+      const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      const found = bookingIn(body, booking.id);
+      expect(found).toMatchObject({ id: booking.id, status: 'active' });
+      // Рівно три поля власника (toEqual, не toMatchObject): без passwordHash, ролі й сесій (BR-8).
+      expect(found.student).toEqual({ id: user.id, name: user.name, email: user.email });
     }
     expect(JSON.stringify(body)).not.toContain('passwordHash');
   });
@@ -110,7 +119,7 @@ describe('GET /api/admin/bookings', () => {
     const body = (await listBookings(admin.cookie)).body as AdminBookingListResponse;
 
     for (const [status, row] of Object.entries(rows)) {
-      expect(body.bookings.find((b) => b.id === row.id)?.status, status).toBe(status);
+      expect(bookingIn(body, row.id).status, status).toBe(status);
     }
   });
 
@@ -122,9 +131,10 @@ describe('GET /api/admin/bookings', () => {
 
     const body = (await listBookings(admin.cookie)).body as AdminBookingListResponse;
 
-    const found = body.bookings.find((b) => b.id === booking.id);
-    expect(found?.status).toBe('auto_cancelled');
-    expect(found?.cancelledAt).toBe(AFTER_DEADLINE.toISOString());
+    expect(bookingIn(body, booking.id)).toMatchObject({
+      status: 'auto_cancelled',
+      cancelledAt: AFTER_DEADLINE.toISOString(),
+    });
     const stored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
     expect(stored.status).toBe('auto_cancelled');
   });
@@ -232,7 +242,7 @@ describe('POST /api/admin/bookings/:bookingId/confirm', () => {
     await cancelExpiredBookings(AFTER_DEADLINE);
     const body = (await listBookings(admin.cookie)).body as AdminBookingListResponse;
 
-    expect(body.bookings.find((b) => b.id === booking.id)?.status).toBe('confirmed');
+    expect(bookingIn(body, booking.id).status).toBe('confirmed');
     const stored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
     expect(stored.status).toBe('confirmed');
     expect(stored.cancelledAt).toBeNull();
