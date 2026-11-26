@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LoginBody, PASSWORD_MIN_LENGTH, RegisterBody } from '@roomly/shared';
-import {
-  collectFieldErrors,
-  firstInvalidField,
-  issuesToFields,
-  readValidationFields,
-} from '../../client/src/auth/fieldErrors';
+import { collectFieldErrors, firstInvalidField, issuesToFields, readValidationFields } from './fieldErrors';
 
 // Клієнтська перевірка форм #11: ті самі схеми shared/, що й на сервері, і ті самі reason.
 function clientErrors<V extends Record<string, string>>(

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { login, logout } from '../../client/src/api/auth';
-import { createBooking, listMyBookings } from '../../client/src/api/bookings';
-import { getErrorMessage } from '../../client/src/api/errorMessages';
-import { ApiError, apiRequest, NetworkError, subscribeToUnauthenticated } from '../../client/src/api/http';
-import { listAvailableSlots } from '../../client/src/api/rooms';
+import { login, logout } from './auth';
+import { createBooking, listMyBookings } from './bookings';
+import { getErrorMessage } from './errorMessages';
+import { ApiError, apiRequest, NetworkError, subscribeToUnauthenticated } from './http';
+import { listAvailableSlots } from './rooms';
 
 afterEach(() => vi.unstubAllGlobals());
 

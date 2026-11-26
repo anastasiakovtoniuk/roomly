@@ -1,11 +1,6 @@
 import { BOOKING_STATUSES } from '@roomly/shared';
 import { describe, expect, it } from 'vitest';
-import {
-  bookingStatusLabel,
-  bookingStatusTone,
-  canCancelBooking,
-  parseBookingScope,
-} from '../../client/src/lib/bookingView';
+import { bookingStatusLabel, bookingStatusTone, canCancelBooking, parseBookingScope } from './bookingView';
 
 // Допоміжна логіка відображення #13; повний AC додатково перевіряється через UI.
 describe('Відображення власних бронювань на клієнті', () => {

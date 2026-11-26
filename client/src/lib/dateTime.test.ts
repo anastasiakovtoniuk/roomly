@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatTime, universityDate } from '../../client/src/lib/dateTime';
+import { formatTime, universityDate } from './dateTime';
 
 // Допоміжна логіка відображення US-2.4; повний AC додатково перевіряється через UI.
 describe('Дата та час університету на клієнті', () => {
