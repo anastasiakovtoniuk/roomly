@@ -187,6 +187,23 @@ describe('POST /api/check-ins', () => {
     expect(stored.confirmedAt).toBeNull();
   });
 
+  it('US-5.1-AC-04: поточне бронювання скасоване студентом, а пізніше є активне — NO_CURRENT_BOOKING, а не CHECK_IN_TOO_EARLY', async () => {
+    const student = await registerStudent(app);
+    const { room, booking: cancelled } = await roomWithBooking(student.userId, 'cancelled_by_student');
+    const laterSlot = await createSlot(room.id, at(SLOT_START, 60));
+    const later = await createBookingRow('active', { slotId: laterSlot.id });
+
+    const res = await scan(student.cookie, room.qrToken);
+
+    expect(res.status).toBe(422);
+    expect(errorCode(res)).toBe('NO_CURRENT_BOOKING');
+    const storedCancelled = await prisma.booking.findUniqueOrThrow({ where: { id: cancelled.id } });
+    expect(storedCancelled.status).toBe('cancelled_by_student');
+    const storedLater = await prisma.booking.findUniqueOrThrow({ where: { id: later.id } });
+    expect(storedLater.status).toBe('active');
+    expect(storedLater.confirmedAt).toBeNull();
+  });
+
   it('US-5.1-AC-06, US-5.6b-AC-03: скан після дедлайну — CHECK_IN_WINDOW_CLOSED, запис автоскасований і не відновлений', async () => {
     const owner = await registerStudent(app);
     const { room, booking } = await roomWithBooking(owner.userId);

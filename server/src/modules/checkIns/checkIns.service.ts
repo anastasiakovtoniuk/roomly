@@ -1,4 +1,4 @@
-import { type CheckInResult } from '@roomly/shared';
+import { type BookingStatus, type CheckInResult } from '@roomly/shared';
 import { prisma } from '../../db/prisma';
 import { AppError } from '../../lib/appError';
 import { now } from '../../lib/clock';
@@ -6,9 +6,20 @@ import { cancelExpiredBookings } from '../bookings/autoCancel';
 import { BOOKING_FIELDS, toApiBooking } from '../bookings/bookings.service';
 import { checkInWindow, confirmableWhere } from './checkInWindow';
 
-// Статуси, серед яких шукається поточне бронювання (api_spec.md §8, крок 3). Скасоване студентом
-// не враховується й дає NO_CURRENT_BOOKING. Живий запис має пріоритет перед автоскасованим.
-const CURRENT_BOOKING_STATUSES = ['confirmed', 'active', 'auto_cancelled'] as const;
+// Записи поточного слота в порядку пріоритету (api_spec.md §8, крок 3): живий, потім автоскасований.
+// Скасований студентом не підтверджується, але означає, що поточне бронювання було: відповідь
+// NO_CURRENT_BOOKING, а не CHECK_IN_TOO_EARLY через пізніше бронювання кімнати (рядок таблиці §8
+// «… або воно скасоване студентом»; рішення команди за ШІ-рев'ю PR #67).
+const CURRENT_BOOKING_PRIORITY: BookingStatus[] = [
+  'confirmed',
+  'active',
+  'auto_cancelled',
+  'cancelled_by_student',
+];
+
+function priority(status: string): number {
+  return (CURRENT_BOOKING_PRIORITY as readonly string[]).indexOf(status);
+}
 
 function windowClosed(): AppError {
   return new AppError('CHECK_IN_WINDOW_CLOSED', 'Час підтвердження минув');
@@ -37,13 +48,12 @@ export async function checkIn(scannerId: string, qrToken: string): Promise<Check
   // не більше одного живого запису (BR-1) і довільна кількість скасованих.
   const candidates = await prisma.booking.findMany({
     where: {
-      status: { in: [...CURRENT_BOOKING_STATUSES] },
+      status: { in: CURRENT_BOOKING_PRIORITY },
       slot: { roomId: room.id, startsAt: { lte: serverTime }, endsAt: { gt: serverTime } },
     },
     select: { id: true, status: true },
   });
-  const current =
-    candidates.find((booking) => booking.status !== 'auto_cancelled') ?? candidates.at(0) ?? null;
+  const current = candidates.sort((a, b) => priority(a.status) - priority(b.status)).at(0) ?? null;
 
   if (!current) {
     // Раннього вікна немає (Q01 [Рішення команди]): бронювання, що ще не почалося, — CHECK_IN_TOO_EARLY.
@@ -54,6 +64,9 @@ export async function checkIn(scannerId: string, qrToken: string): Promise<Check
     throw upcoming ? new AppError('CHECK_IN_TOO_EARLY', 'Бронювання ще не почалося') : noCurrentBooking();
   }
 
+  if (current.status === 'cancelled_by_student') {
+    throw noCurrentBooking();
+  }
   if (current.status === 'auto_cancelled') {
     // Автоскасований запис не відновлюється (US-5.1-AC-06, US-5.6b-AC-03).
     throw windowClosed();
