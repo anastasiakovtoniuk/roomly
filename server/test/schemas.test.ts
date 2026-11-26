@@ -212,6 +212,10 @@ describe('CreateRoomBody', () => {
     expect(CreateRoomBody.safeParse({ ...validRoom, equipment: ['дошка', ' дошка'] }).success).toBe(false);
   });
 
+  it('US-A.1a повтори в обладнанні шукаються з урахуванням регістру', () => {
+    expect(CreateRoomBody.safeParse({ ...validRoom, equipment: ['Екран', 'екран'] }).success).toBe(true);
+  });
+
   it('US-A.1a елемент обладнання 1…50 символів', () => {
     expect(CreateRoomBody.safeParse({ ...validRoom, equipment: ['я'.repeat(50)] }).success).toBe(true);
     expect(CreateRoomBody.safeParse({ ...validRoom, equipment: ['я'.repeat(51)] }).success).toBe(false);
