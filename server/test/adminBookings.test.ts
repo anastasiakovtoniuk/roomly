@@ -188,6 +188,8 @@ describe('GET /api/admin/bookings', () => {
   });
 });
 
+// Моменти рівно на початку слота й рівно в дедлайн не перевіряються (Q01, checkin_admin_flow.md,
+// рішення 4); перевіряємо час строго до й строго після дедлайну (IN_GRACE, AFTER_DEADLINE, BEFORE_START).
 describe('POST /api/admin/bookings/:bookingId/confirm', () => {
   useClock(IN_GRACE);
 
@@ -216,20 +218,6 @@ describe('POST /api/admin/bookings/:bookingId/confirm', () => {
     expect(stored.status).toBe('confirmed');
     expect(stored.confirmedById).toBe(admin.userId);
     expect(stored.userId).toBe(student.userId);
-  });
-
-  it('US-A.7-AC-01 (Q01): рівно в дедлайн вікно ще відкрите — підтверджено', async () => {
-    const admin = await adminSession(app);
-    const student = await newStudent();
-    const booking = await bookingFor(student.userId);
-    setClock(() => DEADLINE);
-
-    const res = await confirm(admin.cookie, booking.id);
-
-    expect(res.status).toBe(200);
-    expect((res.body as CheckInResult).result).toBe('confirmed');
-    const stored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
-    expect(stored.status).toBe('confirmed');
   });
 
   it('US-A.7-AC-02 (SYS-AC-03): підтверджене адміністратором не автоскасовується після дедлайну', async () => {
