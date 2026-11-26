@@ -3,7 +3,6 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   GRACE_PERIOD_MINUTES,
-  SESSION_COOKIE_NAME,
   type AvailableSlotListResponse,
   type BookingListResponse,
   type BookingResponse,
@@ -14,9 +13,9 @@ import { prisma } from '../src/db/prisma';
 import { resetClock, setClock } from '../src/lib/clock';
 import { cancelExpiredBookings } from '../src/modules/bookings/autoCancel';
 import { startAutoCancelScheduler } from '../src/modules/bookings/autoCancelScheduler';
+import { registerStudent } from './helpers/auth';
 
 const app = createApp();
-const PASSWORD = 'secret-pass';
 const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 
@@ -72,21 +71,7 @@ async function statusOf(bookingId: string): Promise<string> {
   return (await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } })).status;
 }
 
-function sessionCookieFrom(res: request.Response): string {
-  const header = res.headers['set-cookie'] as string[] | string | undefined;
-  const cookies = header === undefined ? [] : Array.isArray(header) ? header : [header];
-  const cookie = cookies.find((value) => value.startsWith(`${SESSION_COOKIE_NAME}=`));
-  if (!cookie) throw new Error('Відповідь не встановила cookie сесії');
-  return cookie.split(';', 1).join('');
-}
-
-async function studentCookie(): Promise<string> {
-  const res = await request(app)
-    .post('/api/auth/register')
-    .send({ name: 'Олена', email: `student-${randomUUID()}@example.com`, password: PASSWORD });
-  expect(res.status).toBe(201);
-  return sessionCookieFrom(res);
-}
+const studentCookie = async () => (await registerStudent(app)).cookie;
 
 function errorCode(res: request.Response): string {
   return (res.body as ErrorBody).error.code;
