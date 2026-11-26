@@ -55,6 +55,8 @@ describe('Час слота з форми адміністратора', () => {
 
   it('US-A.2-AC-01: неіснуюча дата й неповний час відхиляються', () => {
     expect(universityDateTimeToUtc('2026-02-30', '10:00', 'Europe/Kyiv')).toBeNull();
+    // Date.UTC трактує роки 0–99 як 1900–1999: зворотна перевірка не збігається, і дата відхиляється.
+    expect(universityDateTimeToUtc('0050-01-01', '10:00', 'Europe/Kyiv')).toBeNull();
     expect(universityDateTimeToUtc('2026-11-30', '', 'Europe/Kyiv')).toBeNull();
     expect(universityDateTimeToUtc('', '10:00', 'Europe/Kyiv')).toBeNull();
   });
