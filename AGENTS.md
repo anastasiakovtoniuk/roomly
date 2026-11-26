@@ -122,6 +122,7 @@ Roomly допомагає студентам бронювати навчальн
 | --- | --- | --- |
 | Установлення залежностей | `npm install` | Ставить пакети всіх workspaces і генерує клієнт Prisma (`postinstall`) |
 | Локальний запуск | `npm run dev` | `.env` з шаблону, якщо його немає → `prisma migrate deploy` → seed адміністратора → сервер (`:3000`) і клієнт (`:5173`) через concurrently |
+| Запуск із HTTPS-тунелем | `npm run dev:tunnel` | Те саме, що `npm run dev`, плюс `ngrok http` на порт клієнта зі статичним доменом з `TUNNEL_DOMAIN` (для камери на телефоні); потребує встановленого ngrok і `.env`, див. README |
 | Збірка | `npm run build` | `typecheck` і `vite build` клієнта |
 | Автоматичні тести | `npm test` | `vitest run` у `server/` на окремій `test.db`; одноразово, не watch |
 | Перевірка типів | `npm run typecheck` | `tsc --noEmit` у `shared`, `server`, `client` |
@@ -131,7 +132,7 @@ Roomly допомагає студентам бронювати навчальн
 | Демо-дані | `npm run db:seed:demo -w server` | `server/prisma/seed-demo.ts`: кімнати й слоти відносно моменту запуску, без користувачів і бронювань; ідемпотентний, з `npm run dev` не запускається |
 | Перегляд даних | `npm run db:studio -w server` | Prisma Studio |
 
-`npm run dev` застосовує лише **наявні** міграції й не скидає базу. Порти й параметри — змінні `SERVER_PORT`, `CLIENT_PORT`, `DATABASE_URL`, `APP_TIMEZONE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` у `.env`; нових змінних не вигадуй без оновлення `.env.example` і README. Сервер у dev запускається через `node --watch --import tsx`, бо `tsx watch` під concurrently на Windows не стартує.
+`npm run dev` застосовує лише **наявні** міграції й не скидає базу. Порти й параметри — змінні `SERVER_PORT`, `CLIENT_PORT`, `DATABASE_URL`, `APP_TIMEZONE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`, а для `npm run dev:tunnel` ще `TUNNEL_DOMAIN`, у `.env`; нових змінних не вигадуй без оновлення `.env.example` і README. Сервер у dev запускається через `node --watch --import tsx`, бо `tsx watch` під concurrently на Windows не стартує.
 
 Перед PR за issue #14 запускай `npm run lint`, `npm run format:check`, `npm run typecheck` і `npm test`, навіть якщо змінено лише документацію. Для фінального сценарію також перевір `npm run build`. Записуй фактичний результат; заблокований запуск не є успішною перевіркою.
 
