@@ -66,6 +66,7 @@ Roomly допомагає студентам бронювати навчальн
 | `package.json` у корені | npm workspaces `shared`, `server`, `client` і спільні скрипти |
 | `.env.example` | Шаблон налаштувань без секретів; `.env` створює `npm run dev` |
 | `scripts/ensure-env.mjs` | Створює `.env` з шаблону, наявний не чіпає |
+| `scripts/dev-tunnel.mjs` | Для `npm run dev:tunnel`: перевіряє `TUNNEL_DOMAIN` і наявність ngrok (`--check`), запускає `ngrok http` на порт клієнта зі статичним доменом |
 | `shared/src/` | `domain.ts` — статуси, ролі, константи; `errors.ts` — коди помилок і HTTP-статуси; `schemas.ts` — схеми Zod вхідних даних; `api.ts` — типи об'єктів і відповідей API; `health.ts` — тип відповіді health |
 | `server/prisma/schema.prisma` | Схема за `data_model.md`, включно з частковим індексом BR-1 |
 | `server/prisma/migrations/` | Міграції; змінюються лише через `prisma migrate dev` |
