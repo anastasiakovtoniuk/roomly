@@ -72,7 +72,7 @@ Roomly допомагає студентам бронювати навчальн
 | `server/prisma/seed.ts` | Ідемпотентний seed адміністратора зі змінних середовища |
 | `server/prisma/seed-demo.ts` | Окремий ідемпотентний demo-seed: 4 кімнати й майбутні слоти на сьогодні та 3 наступні дні; без студентів і бронювань |
 | `server/src/app.ts` | Збирання Express-застосунку: підключення роутерів модулів, 404 і обробник помилок |
-| `server/src/modules/<модуль>/` | Модулі за доменом; зараз є `health/`, `auth/` (реєстрація, вхід, вихід, `me`, сесії в cookie `roomly_session`), `rooms/` (каталог кімнат, вільні слоти на дату) і `bookings/` (створення з функцією дедлайну, список `upcoming`/`past`, деталі й скасування власних бронювань) |
+| `server/src/modules/<модуль>/` | Модулі за доменом; зараз є `health/`, `auth/` (реєстрація, вхід, вихід, `me`, сесії в cookie `roomly_session`), `rooms/` (каталог кімнат, вільні слоти на дату) і `bookings/` (створення з функцією дедлайну, список `upcoming`/`past`, деталі й скасування власних бронювань; `autoCancel.ts` — функція автоскасування, `autoCancelScheduler.ts` — таймер, який стартує лише з `server/src/index.ts`) |
 | `server/src/lib/clock.ts` | Єдине підмінюване джерело часу |
 | `server/src/lib/localDate.ts` | Дата університету (`YYYY-MM-DD`) для моменту UTC у поясі `APP_TIMEZONE`; єдине місце цього перетворення |
 | `server/src/lib/appError.ts` | Помилка з кодом із `error_format.md` |
@@ -82,7 +82,7 @@ Roomly допомагає студентам бронювати навчальн
 | `server/src/middleware/validate.ts` | Перевірка `params`/`query`/`body` схемами Zod із `shared/`; невдача — `VALIDATION_ERROR` з `details.fields` |
 | `server/src/db/prisma.ts` | Клієнт Prisma з адаптером better-sqlite3 |
 | `server/src/generated/` | Згенерований клієнт Prisma; не редагувати, не комітити |
-| `server/test/` | Vitest + Supertest; окрема `prisma/test.db`, створена міграціями. `clientApi.test.ts`, `clientDateTime.test.ts` і `clientAuthForm.test.ts` тимчасово перевіряють чисту логіку клієнта тут на наявному Vitest; це допоміжні перевірки, а не повне проходження AC через UI. DOM-тести потребуватимуть окремого налаштування в `client/` |
+| `server/test/` | Vitest + Supertest; окрема `prisma/test.db`, створена міграціями. Файли тестів виконуються по черзі (`fileParallelism: false`): ліниве автоскасування глобальне й у спільній базі псувало б чужі бронювання. `clientApi.test.ts`, `clientDateTime.test.ts` і `clientAuthForm.test.ts` тимчасово перевіряють чисту логіку клієнта тут на наявному Vitest; це допоміжні перевірки, а не повне проходження AC через UI. DOM-тести потребуватимуть окремого налаштування в `client/` |
 | `client/src/api/http.ts` | Єдина обгортка над fetch: `ApiError` (код із сервера) і `NetworkError` |
 | `client/src/api/` | `auth.ts`, `rooms.ts`, `bookings.ts` — типізовані функції на контрактах `shared/`; `errorMessages.ts` — тексти за машинним кодом |
 | `client/src/auth/` | `AuthProvider`/`useAuth`: відновлення сесії через `/auth/me`, вхід, реєстрація й вихід; `AuthRoute` — захист маршрутів; `useAuthForm` і `fieldErrors` — стан форм входу/реєстрації та тексти помилок полів |
