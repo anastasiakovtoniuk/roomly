@@ -16,7 +16,8 @@ import { AppError } from '../../lib/appError';
 import { now } from '../../lib/clock';
 import { cancelExpiredBookings } from './autoCancel';
 
-const BOOKING_FIELDS = {
+// Вибірка й серіалізатор Booking спільні для модулів bookings і checkIns: другого серіалізатора немає.
+export const BOOKING_FIELDS = {
   id: true,
   status: true,
   deadline: true,
@@ -45,7 +46,7 @@ function isUserRole(value: string): value is UserRole {
 }
 
 // Booking з api_spec.md §2: без даних власника; хто підтвердив — лише роль (US-5.2-AC-04).
-function toApiBooking(record: BookingRecord): Booking {
+export function toApiBooking(record: BookingRecord): Booking {
   if (!isBookingStatus(record.status)) {
     throw new Error(`Невідомий статус бронювання ${record.id}: ${record.status}`);
   }
