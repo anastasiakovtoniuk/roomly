@@ -74,6 +74,7 @@ Roomly допомагає студентам бронювати навчальн
 | `server/prisma/seed-demo.ts` | Окремий ідемпотентний demo-seed: 4 кімнати й майбутні слоти на сьогодні та 3 наступні дні; без студентів і бронювань |
 | `server/src/app.ts` | Збирання Express-застосунку: підключення роутерів модулів, 404 і обробник помилок |
 | `server/src/modules/<модуль>/` | Модулі за доменом; зараз є `health/`, `auth/` (реєстрація, вхід, вихід, `me`, сесії в cookie `roomly_session`), `rooms/` (каталог кімнат, вільні слоти на дату) і `bookings/` (створення з функцією дедлайну, список `upcoming`/`past`, деталі й скасування власних бронювань; `autoCancel.ts` — функція автоскасування, `autoCancelScheduler.ts` — таймер, який стартує лише з `server/src/index.ts`) |
+| `server/src/modules/checkIns/` | `POST /api/check-ins` (#40): підтвердження присутності за QR кімнати будь-яким студентом, одне умовне оновлення `active` → `confirmed`; `checkInWindow.ts` — єдине місце меж вікна (Q01) для студентського й ручного підтвердження (#42). Серіалізатор `Booking` спільний із `bookings.service.ts` |
 | `server/src/lib/clock.ts` | Єдине підмінюване джерело часу |
 | `server/src/lib/localDate.ts` | Дата університету (`YYYY-MM-DD`) для моменту UTC у поясі `APP_TIMEZONE`; єдине місце цього перетворення |
 | `server/src/lib/appError.ts` | Помилка з кодом із `error_format.md` |
