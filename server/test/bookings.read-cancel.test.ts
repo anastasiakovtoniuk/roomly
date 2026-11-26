@@ -200,7 +200,8 @@ describe('GET /api/bookings?scope=past', () => {
     const cancelled = await bookSlot(cookie, (await createSlot(room.id, TOMORROW_12)).id);
     expect((await cancel(cookie, cancelled.id)).status).toBe(200);
     const finished = await bookSlot(cookie, (await createSlot(room.id, TOMORROW_10)).id);
-    // Слот завершився, бронювання лишилося active: автоскасування в сценарії вимкнене.
+    // Слот завершився, а дедлайн минув без підтвердження: ліниве автоскасування (ADR-0006)
+    // перед відповіддю переводить бронювання в auto_cancelled (SYS-AC-02, US-X.3-AC-02).
     setClock(() => new Date('2026-11-03T09:30:00.000Z'));
 
     const res = await list(cookie, 'past');
@@ -209,7 +210,7 @@ describe('GET /api/bookings?scope=past', () => {
     const body = res.body as BookingListResponse;
     expect(body.bookings.map((b) => [b.id, b.status])).toEqual([
       [cancelled.id, 'cancelled_by_student'],
-      [finished.id, 'active'],
+      [finished.id, 'auto_cancelled'],
     ]);
     expect(listedIds(await list(cookie, 'upcoming'))).toEqual([]);
   });
@@ -402,10 +403,11 @@ describe('POST /api/bookings/:bookingId/cancel', () => {
     expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status).toBe('confirmed');
   });
 
-  it('Q07 [Рішення команди]: активне бронювання, що вже почалося, студент скасовує', async () => {
+  it('Q07 [Рішення команди]: активне бронювання, що вже почалося (дедлайн не минув), студент скасовує', async () => {
     const cookie = await studentCookie();
     const booking = await bookSlot(cookie, (await createSlot((await createRoom()).id, TOMORROW_10)).id);
-    setClock(() => new Date('2026-11-03T08:30:00.000Z'));
+    // 08:10 — слот (08:00) уже почався, але дедлайн 08:15 ще не минув: бронювання лишається active.
+    setClock(() => new Date('2026-11-03T08:10:00.000Z'));
 
     const res = await cancel(cookie, booking.id);
 

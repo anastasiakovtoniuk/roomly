@@ -9,6 +9,7 @@ import type { Prisma } from '../../generated/prisma/client';
 import { AppError } from '../../lib/appError';
 import { now } from '../../lib/clock';
 import { toLocalDate, utcRangeCovering } from '../../lib/localDate';
+import { cancelExpiredBookings } from '../bookings/autoCancel';
 
 // qrToken навмисно не вибирається з бази: його немає в Room ні для кого (FB-12).
 const ROOM_FIELDS = {
@@ -67,7 +68,7 @@ export async function getRoom(roomId: string): Promise<Room> {
 // Вільний (TA-11, BR-11, data_model.md §5): немає бронювання active/confirmed і слот ще не почався —
 // G1/Q04 варіант «а», рішення сценарію booking_flow.md; той самий варіант забороняє бронювати
 // розпочатий слот (SLOT_NOT_BOOKABLE), тож список і бронювання узгоджені.
-// Ліниве автоскасування (BR-5, ADR-0006) тут не викликається: у сценарії booking_flow.md воно вимкнене.
+// Перед відповіддю виконується ліниве автоскасування (BR-5, ADR-0006).
 export async function listAvailableSlots(roomId: string, date: string): Promise<AvailableSlotListResponse> {
   const room = await prisma.room.findUnique({ where: { id: roomId }, select: { id: true } });
   if (!room) {
@@ -75,6 +76,7 @@ export async function listAvailableSlots(roomId: string, date: string): Promise<
   }
 
   const serverTime = now();
+  await cancelExpiredBookings(serverTime);
   const { from, to } = utcRangeCovering(date);
   const records = await prisma.slot.findMany({
     where: {
@@ -93,8 +95,8 @@ export async function listAvailableSlots(roomId: string, date: string): Promise<
       roomId: slot.roomId,
       startsAt: slot.startsAt.toISOString(),
       endsAt: slot.endsAt.toISOString(),
-      // US-2.6 поза сценарієм booking_flow.md: автоскасування вимкнене, тож автоскасованих
-      // бронювань не буває і позначка завжди false. Справжня перевірка з'явиться разом з US-2.6.
+      // US-2.6 поза обсягом (checkin_admin_flow.md, рішення 2): за G1/Q04 (а) слот, що почався, не
+      // повертається, а автоскасування настає лише після початку, тож позначка завжди false.
       releasedByAutoCancel: false,
     }));
 

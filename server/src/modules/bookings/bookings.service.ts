@@ -14,6 +14,7 @@ import { prisma } from '../../db/prisma';
 import { Prisma } from '../../generated/prisma/client';
 import { AppError } from '../../lib/appError';
 import { now } from '../../lib/clock';
+import { cancelExpiredBookings } from './autoCancel';
 
 const BOOKING_FIELDS = {
   id: true,
@@ -80,10 +81,10 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 // US-3.1, US-3.4. Власник — лише користувач сесії (BR-17, FB-11).
-// Ліниве автоскасування з api_spec.md §1, §7 тут навмисно не викликається: у сценарії
-// booking_flow.md воно вимкнене (issue #7), бронювання лишається active до скасування.
+// Ліниве автоскасування (api_spec.md §1, §7): спершу скасовуємо прострочені, щоб стан був актуальним.
 export async function createBooking(userId: string, slotId: string): Promise<BookingResponse> {
   const serverTime = now();
+  await cancelExpiredBookings(serverTime);
 
   const slot = await prisma.slot.findUnique({ where: { id: slotId }, select: { startsAt: true } });
   if (!slot) {
@@ -129,6 +130,7 @@ function upcomingWhere(at: Date): Prisma.BookingWhereInput {
 // US-4.2, US-X.3: лише бронювання користувача сесії (BR-8).
 export async function listMyBookings(userId: string, scope: BookingScope): Promise<BookingListResponse> {
   const serverTime = now();
+  await cancelExpiredBookings(serverTime);
   const upcoming = upcomingWhere(serverTime);
   const direction = scope === 'upcoming' ? 'asc' : 'desc';
 
@@ -149,6 +151,7 @@ function bookingNotFound(): AppError {
 // US-3.2a, US-3.2b.
 export async function getMyBooking(userId: string, bookingId: string): Promise<BookingResponse> {
   const serverTime = now();
+  await cancelExpiredBookings(serverTime);
   const record = await prisma.booking.findFirst({ where: { id: bookingId, userId }, select: BOOKING_FIELDS });
   if (!record) {
     throw bookingNotFound();
@@ -159,9 +162,10 @@ export async function getMyBooking(userId: string, bookingId: string): Promise<B
 // US-4.3: одне умовне оновлення active → cancelled_by_student лише для власного запису (BR-6, ADR-0006).
 // Статус наперед не читається: паралельне повторне скасування чи інший перехід просто не оновить рядок.
 // Q07 [Рішення команди]: бронювання, що вже почалося, теж скасовується, поки воно active.
-// Ліниве автоскасування не викликається: у сценарії booking_flow.md воно вимкнене.
+// Спершу ліниве автоскасування: прострочений запис уже `auto_cancelled` і дає BOOKING_STATUS_CONFLICT.
 export async function cancelMyBooking(userId: string, bookingId: string): Promise<BookingResponse> {
   const serverTime = now();
+  await cancelExpiredBookings(serverTime);
   const { count } = await prisma.booking.updateMany({
     where: { id: bookingId, userId, status: 'active' },
     data: { status: 'cancelled_by_student', cancelledAt: serverTime },
