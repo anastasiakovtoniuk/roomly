@@ -108,8 +108,11 @@ export function RoomsPage() {
   // зникає: без прокручування обрана картка могла б зсунутись за межі екрана.
   const scrollToRoom = useRef(false);
   useEffect(() => {
-    if (!scrollToRoom.current || isWide || !roomId) return;
+    if (!scrollToRoom.current) return;
+    // Прапорець скидається завжди: вибір на широкому екрані не повинен прокрутити сторінку пізніше,
+    // коли вікно звузиться.
     scrollToRoom.current = false;
+    if (isWide || !roomId) return;
     document.getElementById(`room-${roomId}`)?.scrollIntoView({ block: 'start' });
   }, [roomId, isWide]);
 
