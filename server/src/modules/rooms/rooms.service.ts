@@ -12,7 +12,7 @@ import { toLocalDate, utcRangeCovering } from '../../lib/localDate';
 import { cancelExpiredBookings } from '../bookings/autoCancel';
 
 // qrToken навмисно не вибирається з бази: його немає в Room ні для кого (FB-12).
-const ROOM_FIELDS = {
+export const ROOM_FIELDS = {
   id: true,
   name: true,
   capacity: true,
@@ -21,7 +21,7 @@ const ROOM_FIELDS = {
   equipment: true,
 } as const satisfies Prisma.RoomSelect;
 
-type RoomRecord = Prisma.RoomGetPayload<{ select: typeof ROOM_FIELDS }>;
+export type RoomRecord = Prisma.RoomGetPayload<{ select: typeof ROOM_FIELDS }>;
 
 // Абетка української мови: SQLite порівнює байти, тож велика й мала літери та «і», «ї», «є»
 // опинялися б не на своїх місцях. Кімнат десятки (TA-13), тому сортування в пам'яті дешеве.
@@ -37,7 +37,7 @@ function parseEquipment(record: RoomRecord): string[] {
   return value;
 }
 
-function toApiRoom(record: RoomRecord): Room {
+export function toApiRoom(record: RoomRecord): Room {
   return {
     id: record.id,
     name: record.name,
