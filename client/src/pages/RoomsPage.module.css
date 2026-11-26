@@ -74,7 +74,7 @@
 }
 
 .roomCard {
-  height: 100%;
+  scroll-margin-top: 1rem;
   padding: 1.25rem;
   border: 1px solid var(--color-border);
   border-radius: 0.875rem;
@@ -155,6 +155,11 @@
   border: 1px solid var(--color-border);
   border-radius: 0.875rem;
   background: var(--color-surface);
+}
+
+/* На вузькому екрані панель вільного часу стоїть під обраною кімнатою, а не окремим блоком унизу. */
+.availability.inline {
+  margin-top: 0.75rem;
 }
 
 .refreshButton {
@@ -242,16 +247,21 @@
 }
 
 @media (min-width: 38rem) {
-  .rooms {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .slot button {
     flex: 0 0 auto;
   }
 }
 
 @media (min-width: 58rem) {
+  .rooms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Дві колонки: картки однакової висоти. Вузький екран: висота за вмістом, бо під карткою стоїть панель часу. */
+  .roomCard {
+    height: 100%;
+  }
+
   .content {
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
     gap: 1.5rem;
