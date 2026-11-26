@@ -40,7 +40,7 @@ export async function checkIn(scannerId: string, qrToken: string): Promise<Check
       status: { in: [...CURRENT_BOOKING_STATUSES] },
       slot: { roomId: room.id, startsAt: { lte: serverTime }, endsAt: { gt: serverTime } },
     },
-    select: { id: true, status: true, deadline: true, slot: { select: { startsAt: true } } },
+    select: { id: true, status: true },
   });
   const current =
     candidates.find((booking) => booking.status !== 'auto_cancelled') ?? candidates.at(0) ?? null;
@@ -58,32 +58,49 @@ export async function checkIn(scannerId: string, qrToken: string): Promise<Check
     // Автоскасований запис не відновлюється (US-5.1-AC-06, US-5.6b-AC-03).
     throw windowClosed();
   }
+  return confirmCurrentBooking(current.id, scannerId, serverTime);
+}
 
-  let result: CheckInResult['result'] = 'already_confirmed';
-  if (current.status === 'active') {
-    if (checkInWindow(current.slot.startsAt, current.deadline, serverTime) === 'closed') {
-      throw windowClosed();
-    }
-    const { count } = await prisma.booking.updateMany({
-      where: { id: current.id, ...confirmableWhere(serverTime) },
-      data: { status: 'confirmed', confirmedAt: serverTime, confirmedById: scannerId },
-    });
-    if (count === 1) {
-      result = 'confirmed';
-    }
-  }
+// Умовний перехід `active` → `confirmed` і стан після нього. Викликається для запису, щойно
+// прочитаного як `active` чи `confirmed`; між читанням і оновленням конкурентна дія (автоскасування,
+// інше підтвердження, скасування студентом) може змінити рядок. Одне умовне updateMany, а не
+// «перевірити → записати»: рядок, що вже не відповідає умові, не переписується (SYS-AC-07).
+// Експортовано, щоб тест детерміновано відтворив програну гонку справжнім записом у БД без підміни Prisma.
+export async function confirmCurrentBooking(
+  bookingId: string,
+  confirmedById: string,
+  at: Date,
+): Promise<CheckInResult> {
+  const { count } = await prisma.booking.updateMany({
+    where: { id: bookingId, ...confirmableWhere(at) },
+    data: { status: 'confirmed', confirmedAt: at, confirmedById },
+  });
 
-  // Стан після операції. Якщо умовне оновлення не змінило рядок, конкурентна дія вже вирішила
-  // результат (SYS-AC-07): `confirmed` — повтор без змін (BR-10), інакше підтвердження неможливе.
   const record = await prisma.booking.findUniqueOrThrow({
-    where: { id: current.id },
+    where: { id: bookingId },
     select: BOOKING_FIELDS,
   });
-  if (record.status === 'cancelled_by_student') {
-    throw noCurrentBooking();
+  switch (record.status) {
+    case 'confirmed':
+      // Повтор чи програна гонка з іншим підтвердженням — без змін (BR-10).
+      return {
+        result: count === 1 ? 'confirmed' : 'already_confirmed',
+        booking: toApiBooking(record),
+        serverTime: at.toISOString(),
+      };
+    case 'cancelled_by_student':
+      throw noCurrentBooking();
+    case 'auto_cancelled':
+      throw windowClosed();
+    case 'active': {
+      const state = checkInWindow(record.slot.startsAt, record.deadline, at);
+      if (state === 'closed') throw windowClosed();
+      if (state === 'too_early') throw new AppError('CHECK_IN_TOO_EARLY', 'Бронювання ще не почалося');
+      // `active` у відкритому вікні, але умова оновлення його не взяла: розбіжність між
+      // checkInWindow і confirmableWhere. Це помилка сервера, а не закрите вікно для студента.
+      throw new Error(`Бронювання ${bookingId} у відкритому вікні не підтверджено`);
+    }
+    default:
+      throw new Error(`Невідомий статус бронювання ${bookingId}: ${record.status}`);
   }
-  if (record.status !== 'confirmed') {
-    throw windowClosed();
-  }
-  return { result, booking: toApiBooking(record), serverTime: serverTime.toISOString() };
 }
