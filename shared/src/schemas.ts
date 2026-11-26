@@ -1,4 +1,4 @@
-// Схеми Zod вхідних даних — docs/contracts/api_spec.md §5–7, §11.
+// Схеми Zod вхідних даних — docs/contracts/api_spec.md §5–9, §11.
 // Одні й ті самі на клієнті (зручність) і сервері (обов'язкова перевірка), ADR-0003.
 // Невідомі поля відкидаються: так ігнорується `role` у реєстрації (BR-14, FB-14).
 import { z } from 'zod';
@@ -71,3 +71,63 @@ export type CreateBookingBody = z.infer<typeof CreateBookingBody>;
 
 export const ListMyBookingsQuery = z.object({ scope: z.enum(BOOKING_SCOPES) });
 export type ListMyBookingsQuery = z.infer<typeof ListMyBookingsQuery>;
+
+// POST /api/check-ins (§8). Вміст QR передається без змін (TA-12): без trim і нормалізації,
+// інакше токен із пробілами по краях порівнювався б не з тим, що прочитала камера.
+const QR_TOKEN_MAX_LENGTH = 200;
+
+export const CheckInBody = z.object({ qrToken: z.string().min(1).max(QR_TOKEN_MAX_LENGTH) });
+export type CheckInBody = z.infer<typeof CheckInBody>;
+
+// Кімната адміністратора (§9). [Пропозиція] Q09: усі межі нижче, зокрема обрізання пробілів
+// у `building` та елементах `equipment`, щоб рядок із самих пробілів не проходив як непорожній.
+const ROOM_TEXT_MAX_LENGTH = 100;
+const EQUIPMENT_MAX_ITEMS = 20;
+const EQUIPMENT_ITEM_MAX_LENGTH = 50;
+
+// Повтори шукаються після trim і з урахуванням регістру: « дошка» повторює «дошка», а «Екран» і «екран» різні.
+const Equipment = z
+  .array(z.string().trim().min(1).max(EQUIPMENT_ITEM_MAX_LENGTH))
+  .max(EQUIPMENT_MAX_ITEMS)
+  .refine((items) => new Set(items).size === items.length, {
+    message: 'Обладнання повторюється',
+    // Лише коли елементи вже валідні, щоб не давати другу причину для того самого поля.
+    when: (payload) => payload.issues.length === 0,
+  });
+
+const RoomFields = {
+  name: z.string().trim().min(1).max(ROOM_TEXT_MAX_LENGTH),
+  capacity: z.int().min(1),
+  building: z.string().trim().min(1).max(ROOM_TEXT_MAX_LENGTH),
+  floor: z.int(),
+  equipment: Equipment,
+};
+
+export const CreateRoomBody = z.object(RoomFields);
+export type CreateRoomBody = z.infer<typeof CreateRoomBody>;
+
+// PATCH: ті самі поля, усі необов'язкові, але хоча б одне (US-A.1b); equipment замінює перелік цілком.
+// Невідомі поля відкидаються до перевірки, тож тіло лише з ними теж вважається порожнім.
+export const UpdateRoomBody = z
+  .object(RoomFields)
+  .partial()
+  .refine((body) => Object.values(body).some((value) => value !== undefined), {
+    message: 'Потрібне хоча б одне поле кімнати',
+  });
+export type UpdateRoomBody = z.infer<typeof UpdateRoomBody>;
+
+// POST /api/admin/rooms/:roomId/slots (§9). Лише UTC із `Z` (TA-4): z.iso.datetime() без offset
+// відхиляє і локальний час, і зсув на кшталт +02:00.
+// Тут лише правило, що не залежить від часу й пояса (BR-13). «Та сама дата університету»
+// ([Пропозиція] G7) і «endsAt > now» ([Пропозиція] Q10) потребують APP_TIMEZONE і серверного
+// годинника, тому їх перевіряє сервер: shared/ виконується й на клієнті.
+export const CreateSlotBody = z
+  .object({ startsAt: z.iso.datetime(), endsAt: z.iso.datetime() })
+  .refine((slot) => Date.parse(slot.endsAt) > Date.parse(slot.startsAt), {
+    message: 'Завершення має бути пізніше за початок',
+    path: ['endsAt'],
+    // Помилка формату в Zod 4 не перериває перевірку: без цієї умови час без `Z` розібрався б
+    // як локальний і дав другу, хибну причину.
+    when: (payload) => payload.issues.length === 0,
+  });
+export type CreateSlotBody = z.infer<typeof CreateSlotBody>;

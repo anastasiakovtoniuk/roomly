@@ -442,9 +442,9 @@
 | --- | --- | --- | --- |
 | `name` | string | так | 1…100 символів після обрізання |
 | `capacity` | integer | так | ≥ 1 **[Пропозиція]**, Q09 |
-| `building` | string | так | 1…100 символів |
+| `building` | string | так | 1…100 символів після обрізання пробілів **[Пропозиція]**, Q09 |
 | `floor` | integer | так | Ціле число **[Пропозиція]**, Q09 |
-| `equipment` | string[] | так | 0…20 елементів, кожен 1…50 символів, без повторів **[Пропозиція]**, Q09 |
+| `equipment` | string[] | так | 0…20 елементів, кожен 1…50 символів після обрізання пробілів, без повторів **[Пропозиція]**, Q09; повтори шукаються після обрізання з урахуванням регістру («Екран» і «екран» різні) **[Пропозиція]**, Q09 |
 
 **201 Created** — `{ "room": Room }`. Сервер генерує `qrToken` (у відповіді його немає).
 
@@ -617,7 +617,7 @@
   - `CreateRoomBody` — `name`, `capacity`, `building`, `floor`, `equipment`;
   - `UpdateRoomBody` — ті самі поля, необов'язкові, щонайменше одне;
   - `CreateSlotBody` — `startsAt`, `endsAt`.
-- **Типи відповідей:** `User`, `Room`, `Slot`, `AvailableSlot`, `Booking`, `AdminBooking`, `CheckInResult`, відповідь `health`.
+- **Типи відповідей:** `User`, `Room`, `Slot`, `AvailableSlot`, `Booking`, `AdminBooking`, `CheckInResult`, відповідь `health`; обгортки адмін-ендпоінтів §9: `AdminBookingListResponse` (`bookings`, `serverTime`), `SlotResponse` (`{ slot }`), `QrTokenResponse` (`roomId`, `roomName`, `qrToken`).
 
 ## 12. Що команда має підтвердити
 
