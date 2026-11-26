@@ -92,14 +92,9 @@ Roomly допомагає студентам бронювати навчальн
 | `client/src/auth/` | `AuthProvider`/`useAuth`: відновлення сесії через `/auth/me`, вхід, реєстрація й вихід; `AuthRoute` — захист маршрутів (`guestOnly`, `studentOnly`, `adminOnly`: студент бачить пояснення, гість іде на `/login`); `useAuthForm` і `fieldErrors` — стан форм входу/реєстрації та тексти помилок полів |
 | `client/src/components/` | `Layout`, `Loader`, `ErrorMessage`, `EmptyState`, `TextField`; стилі через CSS Modules |
 | `client/src/App.tsx` | Маршрути `/login`, `/register`, `/rooms`, `/bookings`, `/bookings/:id`, `/admin/rooms`; `/login` — `LoginPage`, `/register` — `RegisterPage`, `/rooms` — `RoomsPage`, `/bookings` — `BookingsPage`, `/bookings/:id` — `BookingDetailsPage`; адміністратору — `/admin` (перенаправлення) і `/admin/rooms` — `AdminRoomsPage` |
-<<<<<<< HEAD
 | `client/src/pages/` | `LoginPage`, `RegisterPage` — вхід і реєстрація; `RoomsPage` — каталог, дата, слоти й створення бронювання; `BookingsPage` — власні бронювання (майбутні й історія), `BookingDetailsPage` — деталі й скасування, `HomePage` — початкова заглушка каркаса; `AdminRoomsPage` з `AdminRoomForm` і `AdminSlotForm` — кімнати й слоти адміністратора |
 | `client/src/lib/dateTime.ts` | Дата запиту й відображення часу в поясі університету; Vite передає лише публічний `APP_TIMEZONE` як константу збірки, решта `.env` не потрапляє у браузер; `universityDateTimeToUtc`/`universityTime` — дата й час форми ↔ UTC ISO без бібліотек |
 | `client/src/lib/adminForms.ts`, `useFocusRequest.ts` | Чиста логіка адмін-форм: рядки → тіла `CreateRoomBody`/`UpdateRoomBody` (лише змінені поля)/`CreateSlotBody`, тексти помилок полів за `reason`; фокус на першому полі з помилкою |
-=======
-| `client/src/pages/` | `LoginPage`, `RegisterPage` — вхід і реєстрація; `RoomsPage` — каталог, дата, слоти й створення бронювання; `BookingsPage` — власні бронювання (майбутні й історія), `BookingDetailsPage` — деталі й скасування, `HomePage` — початкова заглушка каркаса; `AdminRoomsPage` — розділ адміністратора `/admin/rooms` |
-| `client/src/lib/dateTime.ts` | Дата запиту й відображення часу в поясі університету; Vite передає лише публічний `APP_TIMEZONE` як константу збірки, решта `.env` не потрапляє у браузер |
->>>>>>> feat/45-admin-shell
 | `.github/workflows/ci.yml` | lint, format:check, typecheck, test, build |
 | `.github/workflows/ai-review.yml` | ШІ-рев'ю кожного PR за правилами `prompts/5.3_ai_code_review.md`; секрет `CLAUDE_CODE_OAUTH_TOKEN` |
 | `.github/pull_request_template.md` | Шаблон опису Pull Request |
