@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
   // Один .env у корені репозиторію для клієнта й сервера (ADR-0007).
   const env = loadEnv(mode, repoRoot, '');
   const serverPort = env.SERVER_PORT ?? '3000';
+  // Домен HTTPS-тунеля для перевірки на телефоні (issue #57): Vite відхиляє невідомі хости,
+  // тож без нього телефон отримає «Blocked host». Порожнє значення: інших хостів не відкриваємо.
+  const tunnelDomain = (env.TUNNEL_DOMAIN ?? '').trim();
   // У браузер передається лише публічний часовий пояс; решта .env лишається на сервері.
   const appTimezone = new Intl.DateTimeFormat('en-US', {
     timeZone: env.APP_TIMEZONE || 'Europe/Kyiv',
@@ -20,6 +23,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: Number(env.CLIENT_PORT ?? 5173),
       strictPort: true,
+      allowedHosts: tunnelDomain ? [tunnelDomain] : [],
       // Клієнт і API на одному походженні: без CORS і окремого HTTPS для API (ADR-0002, ADR-0005).
       proxy: {
         '/api': `http://localhost:${serverPort}`,
