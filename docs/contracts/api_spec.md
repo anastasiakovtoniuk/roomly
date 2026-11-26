@@ -617,7 +617,7 @@
   - `CreateRoomBody` — `name`, `capacity`, `building`, `floor`, `equipment`;
   - `UpdateRoomBody` — ті самі поля, необов'язкові, щонайменше одне;
   - `CreateSlotBody` — `startsAt`, `endsAt`.
-- **Типи відповідей:** `User`, `Room`, `Slot`, `AvailableSlot`, `Booking`, `AdminBooking`, `CheckInResult`, відповідь `health`.
+- **Типи відповідей:** `User`, `Room`, `Slot`, `AvailableSlot`, `Booking`, `AdminBooking`, `CheckInResult`, відповідь `health`; обгортки адмін-ендпоінтів §9: `AdminBookingListResponse` (`bookings`, `serverTime`), `SlotResponse` (`{ slot }`), `QrTokenResponse` (`roomId`, `roomName`, `qrToken`).
 
 ## 12. Що команда має підтвердити
 
