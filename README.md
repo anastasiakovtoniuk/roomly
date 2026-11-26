@@ -181,7 +181,7 @@ npm run dev
 
 Для підключення екранів використовуйте `useAuth` з `client/src/auth/AuthContext.tsx`: `status`, `user`, `error`, `refresh()`, `login(body)`, `register(body)`, `logout()`. Вхід і реєстрація повертають користувача та оновлюють контекст; після успіху форма переходить на `/rooms`. Усі запити йдуть через функції `client/src/api/auth.ts`, `rooms.ts`, `bookings.ts`; тексти помилок — через `ErrorMessage` або `getErrorMessage`, а не через серверний `message`. Компоненти `Loader`, `EmptyState` і `Layout` спільні для екранів.
 
-Перевірки чистих функцій клієнтського API, дати/часу й помилок полів форм тимчасово лежать у `server/test/clientApi.test.ts`, `clientDateTime.test.ts` та `clientAuthForm.test.ts` і виконуються на наявному Vitest через `npm test`. Це допоміжні перевірки, а не DOM-тести чи повне проходження AC через UI; після появи тестового налаштування клієнта їх можна перенести в `client/`.
+Тести клієнта лежать поряд із модулями: `client/src/api/api.test.ts`, `client/src/lib/dateTime.test.ts`, `client/src/lib/bookingView.test.ts`, `client/src/auth/fieldErrors.test.ts` (чиста логіка, середовище `node`) і `client/src/components/EmptyState.test.tsx` (приклад компонентного тесту в `jsdom`). Вони виконуються Vitest із `client/` і входять у кореневий `npm test` разом із серверними. Це допоміжні перевірки, а не повне проходження AC через UI. Спільні хелпери серверних тестів (кімнати, слоти, користувачі, сесії студента й адміністратора) лежать у `server/test/helpers/`; тестова база спільна й не очищується, кожен тест створює власні унікальні дані, а файли тестів виконуються по черзі.
 
 ### Вхід, реєстрація й вихід (#11)
 
