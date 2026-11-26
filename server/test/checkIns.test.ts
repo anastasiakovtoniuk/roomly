@@ -1,12 +1,12 @@
 import request from 'supertest';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { GRACE_PERIOD_MINUTES, type CheckInResult, type ErrorBody } from '@roomly/shared';
 import { createApp } from '../src/app';
 import { prisma } from '../src/db/prisma';
-import type { Prisma } from '../src/generated/prisma/client';
 import { setClock } from '../src/lib/clock';
+import { confirmCurrentBooking } from '../src/modules/checkIns/checkIns.service';
 import { adminSession, registerStudent } from './helpers/auth';
-import { createBookingRow, createRoom, createSlot } from './helpers/factories';
+import { createBookingRow, createRoom, createSlot, createUser } from './helpers/factories';
 import { at, useClock } from './helpers/time';
 
 const app = createApp();
@@ -36,29 +36,8 @@ function errorCode(res: request.Response) {
   return (res.body as ErrorBody).error.code;
 }
 
-// Детерміноване переплетення для SYS-AC-07: паралельні HTTP-запити на тестовій SQLite виконуються
-// по черзі й гонки не відтворюють. Тому між читанням бронювання й умовним оновленням сервісу
-// конкурентна дія виконується справжнім записом у ту саму БД, а потім — справжній updateMany
-// сервісу. Prisma не мокається: перевіряється, що умова оновлення не переписує чужий перехід.
-// Перехоплюється лише оновлення в `confirmed`: першим updateMany викликає ліниве автоскасування.
-function competingTransitionBeforeConfirm(bookingId: string, data: Prisma.BookingUncheckedUpdateManyInput) {
-  const realUpdateMany = prisma.booking.updateMany.bind(prisma.booking);
-  let competed = false;
-  vi.spyOn(prisma.booking, 'updateMany').mockImplementation((args) => {
-    if (competed || args.data.status !== 'confirmed') return realUpdateMany(args);
-    competed = true;
-    // Сервіс лише очікує результат, тому звичайний Promise замість PrismaPromise для нього достатній.
-    return realUpdateMany({ where: { id: bookingId }, data }).then(() =>
-      realUpdateMany(args),
-    ) as unknown as ReturnType<typeof realUpdateMany>;
-  });
-}
-
 describe('POST /api/check-ins', () => {
   useClock(IN_GRACE);
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
 
   it('US-5.1-AC-01: власник скануює QR у межах grace period — бронювання підтверджене', async () => {
     const owner = await registerStudent(app);
@@ -229,18 +208,22 @@ describe('POST /api/check-ins', () => {
     expect(errorCode(retry)).toBe('CHECK_IN_WINDOW_CLOSED');
   });
 
+  // SYS-AC-07. Паралельні HTTP-запити на тестовій SQLite виконуються по черзі й гонки не відтворюють,
+  // тому програна гонка відтворюється детерміновано: сервіс прочитав запис як `active`, конкурентна
+  // дія встигла записати своє в ту саму БД, і лише потім виконується умовний перехід сервісу.
+  // Prisma не мокається: обидва записи справжні.
   it('SYS-AC-07: автоскасування виграло гонку після читання — CHECK_IN_WINDOW_CLOSED, автоскасований запис не переписано', async () => {
-    const owner = await registerStudent(app);
-    const { room, booking } = await roomWithBooking(owner.userId);
-    competingTransitionBeforeConfirm(booking.id, {
-      status: 'auto_cancelled',
-      cancelledAt: IN_GRACE,
+    const scanner = await createUser();
+    const { booking } = await roomWithBooking((await createUser()).id);
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: 'auto_cancelled', cancelledAt: IN_GRACE },
     });
 
-    const res = await scan(owner.cookie, room.qrToken);
+    await expect(confirmCurrentBooking(booking.id, scanner.id, IN_GRACE)).rejects.toMatchObject({
+      code: 'CHECK_IN_WINDOW_CLOSED',
+    });
 
-    expect(res.status).toBe(422);
-    expect(errorCode(res)).toBe('CHECK_IN_WINDOW_CLOSED');
     const stored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
     expect(stored.status).toBe('auto_cancelled');
     expect(stored.confirmedAt).toBeNull();
@@ -248,24 +231,26 @@ describe('POST /api/check-ins', () => {
   });
 
   it('SYS-AC-07, US-5.1-AC-05: інше підтвердження виграло гонку після читання — already_confirmed без перезапису', async () => {
-    const owner = await registerStudent(app, 'Власниця');
-    const other = await registerStudent(app, 'Інший');
-    const { room, booking } = await roomWithBooking(owner.userId);
+    const first = await createUser();
+    const second = await createUser();
+    const { booking } = await roomWithBooking((await createUser()).id);
     const firstConfirmedAt = at(IN_GRACE, -1);
-    competingTransitionBeforeConfirm(booking.id, {
-      status: 'confirmed',
-      confirmedAt: firstConfirmedAt,
-      confirmedById: other.userId,
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: 'confirmed', confirmedAt: firstConfirmedAt, confirmedById: first.id },
     });
 
-    const res = await scan(owner.cookie, room.qrToken);
+    const outcome = await confirmCurrentBooking(booking.id, second.id, IN_GRACE);
 
-    expect(res.status).toBe(200);
-    expect((res.body as CheckInResult).result).toBe('already_confirmed');
+    expect(outcome.result).toBe('already_confirmed');
+    expect(outcome.booking).toMatchObject({
+      status: 'confirmed',
+      confirmedAt: firstConfirmedAt.toISOString(),
+    });
     const stored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
     expect(stored.status).toBe('confirmed');
     expect(stored.confirmedAt?.toISOString()).toBe(firstConfirmedAt.toISOString());
-    expect(stored.confirmedById).toBe(other.userId);
+    expect(stored.confirmedById).toBe(first.id);
   });
 
   it('US-5.1-AC-01, US-5.1-AC-06: на поточному слоті живий запис має пріоритет перед автоскасованим, який не відновлюється', async () => {
