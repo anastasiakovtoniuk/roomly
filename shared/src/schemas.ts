@@ -79,14 +79,13 @@ const QR_TOKEN_MAX_LENGTH = 200;
 export const CheckInBody = z.object({ qrToken: z.string().min(1).max(QR_TOKEN_MAX_LENGTH) });
 export type CheckInBody = z.infer<typeof CheckInBody>;
 
-// Кімната адміністратора (§9). [Пропозиція] Q09: усі межі нижче.
-// Контракт явно обрізає лише `name`; `building` і елементи `equipment` обрізаються так само,
-// щоб рядок із самих пробілів не проходив як непорожній (уточнюється разом із Q09).
+// Кімната адміністратора (§9). [Пропозиція] Q09: усі межі нижче, зокрема обрізання пробілів
+// у `building` та елементах `equipment`, щоб рядок із самих пробілів не проходив як непорожній.
 const ROOM_TEXT_MAX_LENGTH = 100;
 const EQUIPMENT_MAX_ITEMS = 20;
 const EQUIPMENT_ITEM_MAX_LENGTH = 50;
 
-// Повтори шукаються після trim: «дошка» і « дошка» — той самий елемент.
+// Повтори шукаються після trim і з урахуванням регістру: « дошка» повторює «дошка», а «Екран» і «екран» різні.
 const Equipment = z
   .array(z.string().trim().min(1).max(EQUIPMENT_ITEM_MAX_LENGTH))
   .max(EQUIPMENT_MAX_ITEMS)
