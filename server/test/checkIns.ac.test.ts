@@ -368,6 +368,9 @@ describe('US-5.6a, US-5.6b: мережа й повтор (серверна ча�
 describe('SYS-AC-07: конкурентне підтвердження й автоскасування на реальній БД', () => {
   useClock(IN_GRACE);
 
+  // Порядок виконання в Promise.all не гарантований, тому тест перевіряє лише узгодженість кінцевого стану
+  // (confirmed або auto_cancelled, без суміші), а не те, хто виграв. Хто виграв, фіксують детерміновані
+  // тести гонок нижче.
   it('SYS-AC-07: одночасні check-in о 10:05 і автоскасування з моментом 10:16 — один узгоджений кінцевий стан', async () => {
     const owner = await studentSession();
     const { room, booking } = await roomWithBooking(owner.userId);
