@@ -31,7 +31,9 @@ export function BookingCheckInPrompt({
   const serverNow = serverNowMs(serverTime, receivedAt, clientNow);
   const left = remainingMs(booking.deadline, serverTime, clientNow, receivedAt);
   const started = booking.status === 'active' && Date.parse(booking.slot.startsAt) <= serverNow;
-  const expired = started && left === 0;
+  // Рівно в deadline вікно ще відкрите (рішення 4, Q01/G4; як isStartNoticeDue і сервер), тож
+  // «минув» — лише після нього, а не з першого нуля відліку (#76).
+  const expired = started && serverNow > Date.parse(booking.deadline);
   const due = !expired && isStartNoticeDue(booking, serverNow);
 
   const handleExpire = useEffectEvent(onExpire);
