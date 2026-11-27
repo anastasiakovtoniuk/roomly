@@ -1,0 +1,41 @@
+.page {
+  min-width: 0;
+  max-width: 40rem;
+}
+
+.room {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.student {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.email {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.ok,
+.error {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+}
+
+.ok {
+  color: var(--color-ok);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+.confirm {
+  width: 100%;
+  margin-top: 1rem;
+}

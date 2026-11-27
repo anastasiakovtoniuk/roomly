@@ -16,7 +16,9 @@ import {
   parseBookingTab,
   splitStartedBookings,
 } from '../lib/bookingView';
+import { serverNowMs } from '../lib/countdown';
 import { formatDate, formatTime } from '../lib/dateTime';
+import { useClientNow } from '../lib/useClientNow';
 import { usePolling } from '../lib/usePolling';
 import styles from './Bookings.module.css';
 
@@ -39,17 +41,12 @@ type ListState =
     }
   | { kind: 'error'; tab: BookingTab; error: unknown };
 
-// «Активні» й «Минулі» — клієнтський поділ відповіді scope=past за serverTime (рішення 5
-// checkin_admin_flow.md); «Майбутні» — scope=upcoming без змін.
+// Зберігається вся відповідь: «Активні» й «Минулі» ділять її під час показу (див. visibleBookings).
 function readyState(tab: BookingTab, response: BookingListResponse): ListState {
-  const bookings =
-    tab === 'upcoming'
-      ? response.bookings
-      : splitStartedBookings(response.bookings, response.serverTime)[tab];
   return {
     kind: 'ready',
     tab,
-    bookings,
+    bookings: response.bookings,
     serverTime: response.serverTime,
     receivedAt: Date.now(),
     refreshFailed: false,
@@ -86,6 +83,20 @@ export function BookingsPage() {
 
   // Результат іншої вкладки не належить поточній, навіть до cleanup ефекту.
   const current = state !== null && state.tab === tab ? state : null;
+
+  // «Активні»/«Минулі» (рішення 5) і нагадування (рішення 6) рахуються за поточною оцінкою
+  // серверного часу, тим самим годинником, що й відлік у картці (TA-5, #76): завершене
+  // бронювання переходить у «Минулі» одразу, а не з наступним опитуванням. «Майбутні» —
+  // scope=upcoming без змін, межу початку визначає сервер.
+  const clientNow = useClientNow();
+  const serverNow =
+    current?.kind === 'ready' ? serverNowMs(current.serverTime, current.receivedAt, clientNow) : 0;
+  const visibleBookings =
+    current?.kind !== 'ready'
+      ? []
+      : tab === 'upcoming'
+        ? current.bookings
+        : splitStartedBookings(current.bookings, serverNow)[tab];
 
   async function refresh() {
     if (current?.kind !== 'ready') return;
@@ -157,7 +168,7 @@ export function BookingsPage() {
           <Loader label="Завантажуємо бронювання…" />
         ) : current.kind === 'error' ? (
           <ErrorMessage error={current.error} onRetry={reload} />
-        ) : current.bookings.length === 0 ? (
+        ) : visibleBookings.length === 0 ? (
           tab === 'upcoming' ? (
             <EmptyState title="Майбутніх бронювань немає" description="Обери кімнату й вільний час.">
               <Link to="/rooms">До кімнат</Link>
@@ -175,7 +186,7 @@ export function BookingsPage() {
           )
         ) : (
           <ul className={styles.list} aria-label={TAB_TITLES[tab]}>
-            {current.bookings.map((booking) => (
+            {visibleBookings.map((booking) => (
               <li key={booking.id}>
                 <article className={styles.card}>
                   <div className={styles.cardHead}>
@@ -195,7 +206,7 @@ export function BookingsPage() {
                     <time dateTime={booking.slot.endsAt}>{formatTime(booking.slot.endsAt)}</time>
                   </p>
                   {/* US-4.1 за гіпотезою H02: лише в застосунку, без push; межа 24 год — Q05/G10. */}
-                  {tab === 'upcoming' && isReminderDue(booking, current.serverTime) && (
+                  {tab === 'upcoming' && isReminderDue(booking, serverNow) && (
                     <p className={styles.reminder}>
                       Нагадування: бронювання починається{' '}
                       <time dateTime={booking.slot.startsAt}>

@@ -203,6 +203,38 @@
   color: var(--color-accent);
 }
 
+/* Дії в деталях (#78): поруч на десктопі, одна під одною на 375 px (2 × 12rem не вміщується). */
+.detailActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.detailActions > * {
+  flex: 1 1 12rem;
+}
+
+.primaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.dangerOutline {
+  border-color: var(--color-error);
+  background: transparent;
+  color: var(--color-error);
+}
+
 .notice {
   margin: 0 0 1rem;
   color: var(--color-muted);

@@ -108,3 +108,22 @@
 .skipLink:focus {
   top: 0.5rem;
 }
+
+/* Навігація на папері не потрібна (друк QR, US-A.4b); тло й колір — для темної теми. */
+@media print {
+  .header,
+  .footer,
+  .skipLink {
+    display: none;
+  }
+
+  .shell {
+    min-height: 0;
+    background: #fff;
+    color: #000;
+  }
+
+  .main {
+    padding: 0;
+  }
+}
