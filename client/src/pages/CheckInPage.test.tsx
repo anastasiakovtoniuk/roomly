@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import type { CheckInResult } from '@roomly/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -38,6 +38,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -93,23 +94,45 @@ describe('Екран підтвердження: мережа й повтор', 
   });
 
   it('US-5.6b-AC-01: після втраченої відповіді повтор не відправляється автоматично, лише за кнопкою', async () => {
+    // Фіктивний час іде разом зі справжнім (для findBy), але його можна перемотати вперед.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     renderPage();
     submitToken();
 
-    const retry = await screen.findByRole('button', { name: 'Повторити' });
+    await screen.findByRole('button', { name: 'Повторити' });
     expect(screen.getByText('Немає відповіді від сервера')).toBeTruthy();
-    // Чекаємо ще кілька тактів: жодного другого запиту без натискання.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Хвилина без натискання: автоповтор із будь-яким інтервалом до неї вже надіслав би запит.
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     fetchMock.mockResolvedValueOnce(okResponse({ ...confirmed, result: 'already_confirmed' }));
-    fireEvent.click(retry);
-    fireEvent.click(retry);
+    fireEvent.click(screen.getByRole('button', { name: 'Повторити' }));
 
     expect(await screen.findByText('Бронювання вже підтверджене')).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(sentBodies()).toEqual([{ qrToken: TOKEN }, { qrToken: TOKEN }]);
+  });
+
+  it('US-5.6b-AC-01: поки повтор у дорозі, другий запит надіслати неможливо', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    renderPage();
+    submitToken();
+
+    // Відповідь на повтор затримана: перевіряємо екран посеред запиту.
+    let respond: (response: Response) => void = () => undefined;
+    fetchMock.mockReturnValueOnce(new Promise<Response>((resolve) => (respond = resolve)));
+    fireEvent.click(await screen.findByRole('button', { name: 'Повторити' }));
+
+    expect(await screen.findByText('Надсилаємо підтвердження…')).toBeTruthy();
+    // Свіжий пошук: жодної кнопки, якою можна надіслати ще один запит, на екрані немає.
+    expect(screen.queryByRole('button', { name: 'Повторити' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Підтвердити' })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => respond(okResponse(confirmed)));
+    expect(await screen.findByText('Присутність підтверджено')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('US-5.6b-AC-03: після CHECK_IN_WINDOW_CLOSED кнопки «Повторити» немає', async () => {
