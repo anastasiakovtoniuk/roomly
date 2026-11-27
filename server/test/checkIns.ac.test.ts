@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import type { BookingListResponse, BookingResponse, CheckInResult, ErrorBody } from '@roomly/shared';
 import { createApp } from '../src/app';
 import { prisma } from '../src/db/prisma';
+import { AppError } from '../src/lib/appError';
 import { setClock } from '../src/lib/clock';
 import { cancelExpiredBookings } from '../src/modules/bookings/autoCancel';
+import { confirmCurrentBooking } from '../src/modules/checkIns/checkIns.service';
 import { adminSession, sessionCookieFrom } from './helpers/auth';
 import { createBookingRow, createRoom, createSlot, createUser } from './helpers/factories';
 import { at, useClock } from './helpers/time';
@@ -389,5 +391,67 @@ describe('SYS-AC-07: конкурентне підтвердження й авт
       expect(row.status).toBe('auto_cancelled');
       expect(row.confirmedAt).toBeNull();
     }
+  });
+
+  // Детермінований варіант програної гонки: фоновий таймер уже бачив 10:16 і скасував запис, а скан
+  // оброблено з моментом 10:05 (у вікні). Автоскасований запис не підтверджується й не відновлюється.
+  it('SYS-AC-07, US-5.1-AC-06: автоскасування виграло — скан у межах вікна дає CHECK_IN_WINDOW_CLOSED, запис auto_cancelled', async () => {
+    const owner = await studentSession();
+    const { room, booking } = await roomWithBooking(owner.userId);
+    await cancelExpiredBookings(AFTER_DEADLINE);
+
+    const res = await scan(owner.cookie, { qrToken: room.qrToken });
+
+    expect(res.status).toBe(422);
+    expect(errorOf(res).code).toBe('CHECK_IN_WINDOW_CLOSED');
+    const row = await stored(booking.id);
+    expect(row.status).toBe('auto_cancelled');
+    expect(row.confirmedAt).toBeNull();
+    expect(row.confirmedById).toBeNull();
+  });
+
+  // Гілки перечитування після програної гонки (ШІ-рев'ю PR #67): спершу справжній запис у БД,
+  // потім виклик confirmCurrentBooking — без підміни Prisma.
+  it('SYS-AC-07, US-5.1-AC-04: скасування студентом виграло гонку — NO_CURRENT_BOOKING, статус cancelled_by_student', async () => {
+    const scanner = await createUser();
+    const { booking } = await roomWithBooking((await createUser()).id);
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: 'cancelled_by_student', cancelledAt: IN_GRACE },
+    });
+
+    const result = confirmCurrentBooking(booking.id, scanner.id, IN_GRACE);
+
+    await expect(result).rejects.toBeInstanceOf(AppError);
+    await expect(result).rejects.toMatchObject({ code: 'NO_CURRENT_BOOKING' });
+    const row = await stored(booking.id);
+    expect(row.status).toBe('cancelled_by_student');
+    expect(row.confirmedAt).toBeNull();
+  });
+
+  it('SYS-AC-07, US-5.1-AC-06: active із минулим дедлайном (10:16) — CHECK_IN_WINDOW_CLOSED, статус не змінено', async () => {
+    const scanner = await createUser();
+    const { booking } = await roomWithBooking((await createUser()).id);
+
+    const result = confirmCurrentBooking(booking.id, scanner.id, AFTER_DEADLINE);
+
+    await expect(result).rejects.toBeInstanceOf(AppError);
+    await expect(result).rejects.toMatchObject({ code: 'CHECK_IN_WINDOW_CLOSED' });
+    const row = await stored(booking.id);
+    expect(row.status).toBe('active');
+    expect(row.confirmedAt).toBeNull();
+  });
+
+  it('SYS-AC-07, US-5.6b-AC-03: active, що ще не почалося (07:00) — CHECK_IN_TOO_EARLY, статус не змінено', async () => {
+    const scanner = await createUser();
+    const { booking } = await roomWithBooking((await createUser()).id);
+
+    const result = confirmCurrentBooking(booking.id, scanner.id, HOURS_BEFORE);
+
+    await expect(result).rejects.toBeInstanceOf(AppError);
+    await expect(result).rejects.toMatchObject({ code: 'CHECK_IN_TOO_EARLY' });
+    const row = await stored(booking.id);
+    expect(row.status).toBe('active');
+    expect(row.confirmedAt).toBeNull();
   });
 });
