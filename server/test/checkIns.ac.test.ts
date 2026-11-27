@@ -370,29 +370,33 @@ describe('SYS-AC-07: конкурентне підтвердження й авт
 
   // Порядок виконання в Promise.all не гарантований, тому тест перевіряє лише узгодженість кінцевого стану
   // (confirmed або auto_cancelled, без суміші), а не те, хто виграв. Хто виграв, фіксують детерміновані
-  // тести гонок нижче.
-  it('SYS-AC-07: одночасні check-in о 10:05 і автоскасування з моментом 10:16 — один узгоджений кінцевий стан', async () => {
-    const owner = await studentSession();
-    const { room, booking } = await roomWithBooking(owner.userId);
+  // тести гонок нижче. Кілька ітерацій із власними даними підвищують шанс побачити обидва виходи;
+  // кожна ітерація сама перевіряє узгодженість відповіді й БД, тож тест не залежить від того, який вихід випав.
+  it('SYS-AC-07: одночасні check-in о 10:05 і автоскасування з моментом 10:16 — кінець один із двох узгоджених станів, без суміші', async () => {
+    const ITERATIONS = 4;
+    for (let i = 0; i < ITERATIONS; i += 1) {
+      const owner = await studentSession();
+      const { room, booking } = await roomWithBooking(owner.userId);
 
-    const [checkIn, autoCancel] = await Promise.allSettled([
-      scan(owner.cookie, { qrToken: room.qrToken }).then((res) => res),
-      cancelExpiredBookings(AFTER_DEADLINE),
-    ]);
+      const [checkIn, autoCancel] = await Promise.allSettled([
+        scan(owner.cookie, { qrToken: room.qrToken }).then((res) => res),
+        cancelExpiredBookings(AFTER_DEADLINE),
+      ]);
 
-    expect(autoCancel.status).toBe('fulfilled');
-    expect(checkIn.status).toBe('fulfilled');
-    if (checkIn.status !== 'fulfilled') throw new Error('Запит check-in не виконався');
-    const row = await stored(booking.id);
-    if (checkIn.value.status === 200) {
-      expect((checkIn.value.body as CheckInResult).result).toBe('confirmed');
-      expect(row.status).toBe('confirmed');
-      expect(row.cancelledAt).toBeNull();
-    } else {
-      expect(checkIn.value.status).toBe(422);
-      expect(errorOf(checkIn.value).code).toBe('CHECK_IN_WINDOW_CLOSED');
-      expect(row.status).toBe('auto_cancelled');
-      expect(row.confirmedAt).toBeNull();
+      expect(autoCancel.status, `ітерація ${i}`).toBe('fulfilled');
+      expect(checkIn.status, `ітерація ${i}`).toBe('fulfilled');
+      if (checkIn.status !== 'fulfilled') throw new Error(`Ітерація ${i}: запит check-in не виконався`);
+      const row = await stored(booking.id);
+      if (checkIn.value.status === 200) {
+        expect((checkIn.value.body as CheckInResult).result, `ітерація ${i}`).toBe('confirmed');
+        expect(row.status, `ітерація ${i}`).toBe('confirmed');
+        expect(row.cancelledAt, `ітерація ${i}`).toBeNull();
+      } else {
+        expect(checkIn.value.status, `ітерація ${i}`).toBe(422);
+        expect(errorOf(checkIn.value).code, `ітерація ${i}`).toBe('CHECK_IN_WINDOW_CLOSED');
+        expect(row.status, `ітерація ${i}`).toBe('auto_cancelled');
+        expect(row.confirmedAt, `ітерація ${i}`).toBeNull();
+      }
     }
   });
 
