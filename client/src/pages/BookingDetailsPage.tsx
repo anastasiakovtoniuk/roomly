@@ -1,23 +1,47 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import type { Booking } from '@roomly/shared';
+import type { Booking, BookingResponse } from '@roomly/shared';
 import { cancelBooking, getBooking } from '../api/bookings';
 import { ApiError, NetworkError } from '../api/http';
+import { BookingCheckInPrompt } from '../components/BookingCheckInPrompt';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Loader } from '../components/Loader';
 import { bookingStatusLabel, bookingStatusTone, canCancelBooking } from '../lib/bookingView';
 import { formatDate, formatTime } from '../lib/dateTime';
+import { usePolling } from '../lib/usePolling';
 import styles from './Bookings.module.css';
 
+// serverTime і receivedAt — основа відліку (TA-5); refreshFailed — фонове оновлення не вдалося,
+// показуються останні отримані дані.
 type DetailsState =
-  { kind: 'ready'; id: string; booking: Booking } | { kind: 'error'; id: string; error: unknown };
+  | {
+      kind: 'ready';
+      id: string;
+      booking: Booking;
+      serverTime: string;
+      receivedAt: number;
+      refreshFailed: boolean;
+    }
+  | { kind: 'error'; id: string; error: unknown };
+
+function readyState(response: BookingResponse): DetailsState {
+  return {
+    kind: 'ready',
+    id: response.booking.id,
+    booking: response.booking,
+    serverTime: response.serverTime,
+    receivedAt: Date.now(),
+    refreshFailed: false,
+  };
+}
 
 function formatMoment(value: string): string {
   return `${formatDate(value)}, ${formatTime(value)}`;
 }
 
-// US-3.2a, US-3.2b, US-4.3: деталі власного бронювання й скасування. Дедлайн лише показується
-// за даними сервера, клієнтський годинник не вирішує, чи можна скасувати.
+// US-3.2a, US-3.2b, US-4.3: деталі власного бронювання й скасування. US-5.3, US-5.4: відлік і
+// повідомлення на початку бронювання. Дедлайн і статус — лише за даними сервера; клієнтський
+// годинник не вирішує, чи можна скасувати, і не змінює статус.
 export function BookingDetailsPage() {
   const { id } = useParams();
   const [state, setState] = useState<DetailsState | null>(null);
@@ -28,6 +52,9 @@ export function BookingDetailsPage() {
   // Синхронний замок не дає двом клікам надіслати скасування до наступного render.
   const cancelLock = useRef(false);
   const operationVersion = useRef(0);
+  // Застосовується лише відповідь останнього запиту: старе фонове оновлення не перепише
+  // результат скасування чи нового завантаження.
+  const requestSeq = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -39,10 +66,11 @@ export function BookingDetailsPage() {
   useEffect(() => {
     if (!id) return;
     const controller = new AbortController();
+    requestSeq.current += 1;
     void getBooking(id, controller.signal).then(
-      ({ booking }) => {
+      (response) => {
         if (controller.signal.aborted) return;
-        if (booking.id !== id) {
+        if (response.booking.id !== id) {
           setState({
             kind: 'error',
             id,
@@ -50,7 +78,7 @@ export function BookingDetailsPage() {
           });
           return;
         }
-        setState({ kind: 'ready', id, booking });
+        setState(readyState(response));
       },
       (error: unknown) => {
         if (!controller.signal.aborted) setState({ kind: 'error', id, error });
@@ -66,16 +94,40 @@ export function BookingDetailsPage() {
     setVersion((value) => value + 1);
   }
 
+  // Фонове оновлення без індикатора завантаження: опитування кожні 30 с і запит після нуля відліку
+  // (checkin_admin_flow.md, рішення 5). Під час скасування не виконується.
+  async function refresh() {
+    if (!id || cancelLock.current || current?.kind !== 'ready') return;
+    requestSeq.current += 1;
+    const request = requestSeq.current;
+    const operation = operationVersion.current;
+    const isLatest = () => request === requestSeq.current && operation === operationVersion.current;
+    try {
+      const response = await getBooking(id);
+      if (!isLatest() || response.booking.id !== id) return;
+      setState(readyState(response));
+    } catch {
+      if (!isLatest()) return;
+      // Помилку не приховуємо, але й не прибираємо останні дані сервера з екрана.
+      setState((previous) =>
+        previous?.kind === 'ready' && previous.id === id ? { ...previous, refreshFailed: true } : previous,
+      );
+    }
+  }
+
+  usePolling(() => void refresh());
+
   async function handleCancel(booking: Booking) {
     if (cancelLock.current || !canCancelBooking(booking.status)) return;
     cancelLock.current = true;
+    requestSeq.current += 1;
     const operation = operationVersion.current;
     setCancelling(true);
     setActionError(null);
     try {
-      const { booking: updated } = await cancelBooking(booking.id);
+      const response = await cancelBooking(booking.id);
       if (operation === operationVersion.current) {
-        setState({ kind: 'ready', id: updated.id, booking: updated });
+        setState(readyState(response));
         setConfirming(false);
       }
     } catch (error) {
@@ -121,6 +173,22 @@ export function BookingDetailsPage() {
           <p className={styles.meta}>
             {current.booking.room.building} · поверх {current.booking.room.floor}
           </p>
+
+          {current.booking.status === 'active' && (
+            <BookingCheckInPrompt
+              booking={current.booking}
+              serverTime={current.serverTime}
+              receivedAt={current.receivedAt}
+              onExpire={() => void refresh()}
+              showCheckInLink={false}
+            />
+          )}
+
+          {current.refreshFailed && (
+            <p className={styles.note} role="status">
+              Не вдалося оновити статус. Показано останні отримані дані; повторимо за 30 с.
+            </p>
+          )}
 
           <dl className={styles.facts}>
             <div>
