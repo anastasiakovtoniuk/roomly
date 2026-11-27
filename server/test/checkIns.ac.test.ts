@@ -338,17 +338,35 @@ describe('US-5.6a, US-5.6b: мережа й повтор (серверна ча�
     expect(row.deadline.toISOString()).toBe(DEADLINE.toISOString());
   });
 
-  it('US-5.6a-AC-02: без надісланого підтвердження бронювання лишається active', async () => {
+  it('US-5.6a-AC-02: без надісланого підтвердження ні автоскасування о 10:14, ні читання не змінюють статус active', async () => {
     const owner = await studentSession();
     const { booking } = await roomWithBooking(owner.userId);
+    setClock(() => LATE_IN_GRACE);
 
-    const res = await request(app).get(`/api/bookings/${booking.id}`).set('Cookie', owner.cookie);
+    // Дії, що могли б змінити статус без підтвердження: фонове автоскасування в межах вікна й ліниве
+    // автоскасування, яке виконується перед кожним читанням бронювань (api_spec.md §1).
+    await cancelExpiredBookings(LATE_IN_GRACE);
+    for (let i = 0; i < 3; i += 1) {
+      const list = await request(app).get('/api/bookings?scope=past').set('Cookie', owner.cookie);
+      expect(list.status).toBe(200);
+      const shown = (list.body as BookingListResponse).bookings.filter((b) => b.id === booking.id);
+      expect(shown.map((b) => b.status)).toEqual(['active']);
 
-    expect(res.status).toBe(200);
-    expect((res.body as BookingResponse).booking).toMatchObject({ status: 'active', confirmedAt: null });
+      const details = await request(app).get(`/api/bookings/${booking.id}`).set('Cookie', owner.cookie);
+      expect(details.status).toBe(200);
+      expect((details.body as BookingResponse).booking).toMatchObject({
+        status: 'active',
+        confirmedAt: null,
+        deadline: DEADLINE.toISOString(),
+      });
+    }
+
     const row = await stored(booking.id);
     expect(row.status).toBe('active');
     expect(row.confirmedAt).toBeNull();
+    expect(row.confirmedById).toBeNull();
+    expect(row.cancelledAt).toBeNull();
+    expect(row.deadline.toISOString()).toBe(DEADLINE.toISOString());
   });
 
   it('US-5.6a-AC-03: невдала спроба не продовжує дедлайн — після 10:15 бронювання автоскасовується', async () => {
