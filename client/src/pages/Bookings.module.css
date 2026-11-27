@@ -68,6 +68,22 @@
   overflow-wrap: anywhere;
 }
 
+/* Картки одного ряду сітки однакової висоти, «Деталі» — на одному рівні внизу. */
+.list > li {
+  display: flex;
+}
+
+.list .card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.list .detailsLink {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
 .cardHead {
   display: flex;
   flex-wrap: wrap;
