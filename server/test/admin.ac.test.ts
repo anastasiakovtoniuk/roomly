@@ -472,32 +472,80 @@ describe('SYS-AC-08, US-1.2-AC-03 — підготовлений адмініс�
 
 describe('SYS-AC-09 — адмін-ендпоінти закриті для гостя й студента', () => {
   // 6 реалізованих шляхів api_spec.md §9 (адмін-скасування чекає Q03/Q18) і неіснуючий шлях.
-  const endpoints: [string, 'get' | 'post' | 'patch', string][] = [
-    ['POST /api/admin/rooms', 'post', '/api/admin/rooms'],
-    ['PATCH /api/admin/rooms/:roomId', 'patch', `/api/admin/rooms/${MISSING_ID}`],
-    ['POST /api/admin/rooms/:roomId/slots', 'post', `/api/admin/rooms/${MISSING_ID}/slots`],
-    ['GET /api/admin/rooms/:roomId/qr', 'get', `/api/admin/rooms/${MISSING_ID}/qr`],
-    ['GET /api/admin/bookings', 'get', '/api/admin/bookings'],
-    ['POST /api/admin/bookings/:bookingId/confirm', 'post', `/api/admin/bookings/${MISSING_ID}/confirm`],
-    ['GET неіснуючий /api/admin/...', 'get', '/api/admin/no-such-route'],
+  // Тіла валідні, а id неіснуючі, тож адміністратор доходить до бізнес-результату з контракту
+  // (§9, error_format.md), а не до VALIDATION_ERROR: точний статус ловить і 500, і зламаний guard.
+  type Endpoint = {
+    name: string;
+    method: 'get' | 'post' | 'patch';
+    path: string;
+    body?: () => object;
+    admin: { status: number; code: string | null };
+  };
+  const endpoints: Endpoint[] = [
+    {
+      name: 'POST /api/admin/rooms',
+      method: 'post',
+      path: '/api/admin/rooms',
+      body: () => roomBody(),
+      admin: { status: 201, code: null },
+    },
+    {
+      name: 'PATCH /api/admin/rooms/:roomId',
+      method: 'patch',
+      path: `/api/admin/rooms/${MISSING_ID}`,
+      body: () => ({ capacity: 6 }),
+      admin: { status: 404, code: 'ROOM_NOT_FOUND' },
+    },
+    {
+      name: 'POST /api/admin/rooms/:roomId/slots',
+      method: 'post',
+      path: `/api/admin/rooms/${MISSING_ID}/slots`,
+      body: () => NEW_SLOT,
+      admin: { status: 404, code: 'ROOM_NOT_FOUND' },
+    },
+    {
+      name: 'GET /api/admin/rooms/:roomId/qr',
+      method: 'get',
+      path: `/api/admin/rooms/${MISSING_ID}/qr`,
+      admin: { status: 404, code: 'ROOM_NOT_FOUND' },
+    },
+    {
+      name: 'GET /api/admin/bookings',
+      method: 'get',
+      path: '/api/admin/bookings',
+      admin: { status: 200, code: null },
+    },
+    {
+      name: 'POST /api/admin/bookings/:bookingId/confirm',
+      method: 'post',
+      path: `/api/admin/bookings/${MISSING_ID}/confirm`,
+      admin: { status: 404, code: 'BOOKING_NOT_FOUND' },
+    },
+    {
+      name: 'GET неіснуючий /api/admin/...',
+      method: 'get',
+      path: '/api/admin/no-such-route',
+      admin: { status: 404, code: 'ENDPOINT_NOT_FOUND' },
+    },
   ];
 
   it.each(endpoints)(
-    'SYS-AC-09: %s — гість 401, студент 403, адміністратор допущений',
-    async (_name, method, path) => {
+    'SYS-AC-09: $name — гість 401, студент 403, адміністратор отримує результат контракту',
+    async ({ method, path, body, admin: expected }) => {
       const student = await studentSession();
       const admin = await adminSession(app);
 
-      const guest = await call(method, path, null);
+      const guest = await call(method, path, null, body?.());
       expect(guest.status).toBe(401);
       expect(error(guest).code).toBe('UNAUTHENTICATED');
 
-      const asStudent = await call(method, path, student.cookie);
+      const asStudent = await call(method, path, student.cookie, body?.());
       expect(asStudent.status).toBe(403);
       expect(error(asStudent).code).toBe('FORBIDDEN');
 
-      const asAdmin = await call(method, path, admin.cookie);
-      expect([401, 403]).not.toContain(asAdmin.status);
+      const asAdmin = await call(method, path, admin.cookie, body?.());
+      expect(asAdmin.status).toBe(expected.status);
+      if (expected.code) expect(error(asAdmin).code).toBe(expected.code);
     },
   );
 });
