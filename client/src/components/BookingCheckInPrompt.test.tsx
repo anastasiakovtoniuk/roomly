@@ -3,6 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import type { Booking, BookingStatus } from '@roomly/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { formatRemaining } from '../lib/countdown';
 import { formatTime } from '../lib/dateTime';
 import { BookingCheckInPrompt } from './BookingCheckInPrompt';
 
@@ -11,6 +12,7 @@ import { BookingCheckInPrompt } from './BookingCheckInPrompt';
 
 const START = '2026-11-03T12:00:00.000Z';
 const DEADLINE = '2026-11-03T12:15:00.000Z';
+const MIN = 60_000;
 
 function booking(status: BookingStatus): Booking {
   return {
@@ -56,7 +58,7 @@ describe('Повідомлення про початок і відлік', () =>
   it('US-5.3-AC-01, US-5.4-AC-02: для активного — дедлайн, як у деталях, і відлік від serverTime', () => {
     renderPrompt('active', '2026-11-03T12:05:00.000Z');
     expect(screen.getByText(formatTime(DEADLINE))).toBeTruthy();
-    expect(screen.getByRole('timer').textContent).toBe('10:00');
+    expect(screen.getByRole('timer').textContent).toBe(formatRemaining(10 * MIN));
   });
 
   it('US-5.3-AC-01: для confirmed, cancelled_by_student, auto_cancelled відліку немає', () => {
@@ -77,7 +79,7 @@ describe('Повідомлення про початок і відлік', () =>
     act(() => {
       vi.advanceTimersByTime(3_000);
     });
-    expect(screen.getByRole('timer').textContent).toBe('9:57');
+    expect(screen.getByRole('timer').textContent).toBe(formatRemaining(10 * MIN - 3_000));
   });
 
   it('US-5.3-AC-01: після нуля — «оновлюємо статус» і запит до сервера, а не «автоскасовано»', () => {

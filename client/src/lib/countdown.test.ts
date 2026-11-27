@@ -12,8 +12,6 @@ describe('Відлік до дедлайну підтвердження', () => 
     const t1410 = Date.parse(at('12:10'));
     expect(remainingMs(DEADLINE, at('12:05'), t1405)).toBe(10 * MIN);
     expect(remainingMs(DEADLINE, at('12:10'), t1410)).toBe(5 * MIN);
-    expect(formatRemaining(10 * MIN)).toBe('10:00');
-    expect(formatRemainingMinutes(5 * MIN)).toContain('5 хв');
   });
 
   it('US-5.3-AC-02: повторне відкриття о 14:10 дає 5 хв від дедлайну, а не повний grace period', () => {
@@ -31,6 +29,14 @@ describe('Відлік до дедлайну підтвердження', () => 
 
   it('US-5.3-AC-01: після дедлайну залишок 0, а не від’ємний', () => {
     expect(remainingMs(DEADLINE, at('12:20'), Date.parse(at('12:20')))).toBe(0);
+  });
+
+  // Формат «хв:с» — робоче рішення #44 (Q13): лише тут фіксується точний рядок, решта тестів
+  // порівнює залишок числом або через formatRemaining, тож зміна формату зламає один тест.
+  it('Q13 (робоче рішення): залишок показується як «хв:с», підпис для читача — у хвилинах', () => {
+    expect(formatRemaining(10 * MIN)).toBe('10:00');
+    expect(formatRemaining(10 * MIN - 3_000)).toBe('9:57');
     expect(formatRemaining(0)).toBe('0:00');
+    expect(formatRemainingMinutes(5 * MIN)).toContain('5 хв');
   });
 });

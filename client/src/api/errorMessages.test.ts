@@ -23,7 +23,8 @@ describe('Тексти помилок клієнта', () => {
 
   it('US-5.6a-AC-01, Q11: мережева помилка має окремий текст, а не загальний збій сервера', () => {
     const text = getErrorMessage(new NetworkError(new TypeError('Failed to fetch')));
-    expect(text).not.toBe(getErrorMessageByCode('INTERNAL_ERROR'));
-    expect(text.length).toBeGreaterThan(0);
+    // Текст не збігається з жодним текстом коду сервера й називає причину — з’єднання.
+    for (const code of ERROR_CODES) expect(text, code).not.toBe(getErrorMessageByCode(code));
+    expect(text).toContain('з’єднання');
   });
 });
