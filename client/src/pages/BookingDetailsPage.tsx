@@ -177,6 +177,13 @@ export function BookingDetailsPage() {
             </p>
           )}
 
+          {/* Чи відкрите вікно підтвердження, вирішує сервер; посилання є для будь-якого активного. */}
+          {current.booking.status === 'active' && (
+            <Link className={styles.detailsLink} to="/check-in">
+              Підтвердити присутність
+            </Link>
+          )}
+
           {canCancelBooking(current.booking.status) &&
             (confirming ? (
               <div className={styles.confirmBox} role="group" aria-label="Підтвердження скасування">

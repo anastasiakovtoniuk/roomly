@@ -1,0 +1,91 @@
+.page {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.manual {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+}
+
+.manual h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Великі зони натискання на телефоні (не менше 44 px). */
+.manual button,
+.actions button,
+.link {
+  min-height: 2.75rem;
+}
+
+.live:empty {
+  display: none;
+}
+
+.sending {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+
+.result {
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-left-width: 0.35rem;
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.result h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+}
+
+.result > p {
+  margin: 0;
+}
+
+.success {
+  border-left-color: var(--color-ok);
+}
+
+.success h2 {
+  color: var(--color-ok);
+}
+
+.failure {
+  border-left-color: var(--color-error);
+}
+
+.failure h2 {
+  color: var(--color-error);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.actions button {
+  flex: 1 1 10rem;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}
