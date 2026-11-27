@@ -60,6 +60,8 @@ describe('SYS-AC-02: автоскасування непідтвердженог
   it('SYS-AC-02: active після дедлайну стає auto_cancelled, на слоті немає живого бронювання', async () => {
     const { slot, booking } = await bookingOn(SLOT_START, (await createUser()).id);
 
+    // cancelExpiredBookings повертає кількість усіх прострочених у спільній test.db, тому тут «не менше 1»,
+    // а точність перевіряє стан власного бронювання нижче.
     expect(await cancelExpiredBookings(AFTER_DEADLINE)).toBeGreaterThanOrEqual(1);
 
     const row = await stored(booking.id);
