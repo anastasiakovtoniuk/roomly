@@ -245,46 +245,52 @@ export function BookingDetailsPage() {
             </p>
           )}
 
-          {/* Чи відкрите вікно підтвердження, вирішує сервер; посилання є для будь-якого активного. */}
-          {current.booking.status === 'active' && (
-            <Link className={styles.detailsLink} to="/check-in">
-              Підтвердити присутність
-            </Link>
+          {/* Дві дії одного рівня з відступом (#78): основна — підтвердження, незворотне скасування
+              виділено кольором помилки. Чи відкрите вікно підтвердження, вирішує сервер. */}
+          {(current.booking.status === 'active' ||
+            (canCancelBooking(current.booking.status) && !confirming)) && (
+            <div className={styles.detailActions}>
+              {current.booking.status === 'active' && (
+                <Link className={styles.primaryAction} to="/check-in">
+                  Підтвердити присутність
+                </Link>
+              )}
+              {canCancelBooking(current.booking.status) && !confirming && (
+                <button
+                  type="button"
+                  className={styles.dangerOutline}
+                  disabled={cancelling}
+                  onClick={() => setConfirming(true)}
+                >
+                  Скасувати бронювання
+                </button>
+              )}
+            </div>
           )}
 
-          {canCancelBooking(current.booking.status) &&
-            (confirming ? (
-              <div className={styles.confirmBox} role="group" aria-label="Підтвердження скасування">
-                <p>Скасувати це бронювання? Слот знову стане вільним для інших.</p>
-                <div className={styles.actions}>
-                  <button
-                    type="button"
-                    className={styles.danger}
-                    disabled={cancelling}
-                    onClick={() => void handleCancel(current.booking)}
-                  >
-                    {cancelling ? 'Скасовуємо…' : 'Так, скасувати'}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.secondary}
-                    disabled={cancelling}
-                    onClick={() => setConfirming(false)}
-                  >
-                    Залишити
-                  </button>
-                </div>
+          {canCancelBooking(current.booking.status) && confirming && (
+            <div className={styles.confirmBox} role="group" aria-label="Підтвердження скасування">
+              <p>Скасувати це бронювання? Слот знову стане вільним для інших.</p>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.danger}
+                  disabled={cancelling}
+                  onClick={() => void handleCancel(current.booking)}
+                >
+                  {cancelling ? 'Скасовуємо…' : 'Так, скасувати'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  disabled={cancelling}
+                  onClick={() => setConfirming(false)}
+                >
+                  Залишити
+                </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                className={styles.secondary}
-                disabled={cancelling}
-                onClick={() => setConfirming(true)}
-              >
-                Скасувати бронювання
-              </button>
-            ))}
+            </div>
+          )}
         </article>
       )}
       <Link className={styles.back} to="/bookings">
