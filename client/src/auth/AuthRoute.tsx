@@ -4,14 +4,22 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Loader } from '../components/Loader';
 
+const STUDENT_ONLY_TEXT = {
+  title: 'Бронювання доступні студентам',
+  description: 'Увійди зі студентського акаунта, щоб керувати власними бронюваннями.',
+};
+
 export function AuthRoute({
   guestOnly = false,
   studentOnly = false,
   adminOnly = false,
+  studentOnlyText = STUDENT_ONLY_TEXT,
 }: {
   guestOnly?: boolean;
   studentOnly?: boolean;
   adminOnly?: boolean;
+  // Пояснення для не-студента; екран підтвердження має власне (#43).
+  studentOnlyText?: { title: string; description: string };
 }) {
   const auth = useAuth();
   if (auth.status === 'loading') return <Loader label="Перевіряємо вхід…" />;
@@ -23,12 +31,7 @@ export function AuthRoute({
   }
   if (!auth.user) return <Navigate to="/login" replace />;
   if (studentOnly && auth.user.role !== 'student') {
-    return (
-      <EmptyState
-        title="Бронювання доступні студентам"
-        description="Увійди зі студентського акаунта, щоб керувати власними бронюваннями."
-      />
-    );
+    return <EmptyState title={studentOnlyText.title} description={studentOnlyText.description} />;
   }
   // Прихований екран не замінює перевірку прав: /api/admin/* закриває сервер (SYS-AC-09).
   if (adminOnly && auth.user.role !== 'admin') {
