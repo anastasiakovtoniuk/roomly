@@ -1,8 +1,10 @@
 import express from 'express';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requireJson } from './middleware/requireJson';
+import { adminRouter } from './modules/admin/admin.router';
 import { authRouter } from './modules/auth/auth.router';
 import { bookingsRouter } from './modules/bookings/bookings.router';
+import { checkInsRouter } from './modules/checkIns/checkIns.router';
 import { healthRouter } from './modules/health/health.router';
 import { roomsRouter } from './modules/rooms/rooms.router';
 
@@ -19,6 +21,9 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/rooms', roomsRouter);
   app.use('/api/bookings', bookingsRouter);
+  app.use('/api/check-ins', checkInsRouter);
+  // До notFoundHandler: студент на будь-який /api/admin/* отримує FORBIDDEN, а не ENDPOINT_NOT_FOUND.
+  app.use('/api/admin', adminRouter);
 
   app.use('/api', notFoundHandler);
   app.use(errorHandler);

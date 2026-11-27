@@ -4,7 +4,7 @@
 
 ## 1. Суть проєкту
 
-Roomly допомагає студентам бронювати навчальні кімнати для групової роботи. Повний задум MVP передбачає QR-підтвердження присутності та автоскасування, але в першому сценарії вони **не реалізовані й вимкнені**.
+Roomly допомагає студентам бронювати навчальні кімнати для групової роботи. Повний задум MVP передбачає QR-підтвердження присутності та автоскасування, але в першому сценарії вони були **не реалізовані й вимкнені**. У другому сценарії ([checkin_admin_flow.md](docs/scenarios/checkin_admin_flow.md)) підключено автоскасування (#39); QR-підтвердження ще ні.
 
 Ролі: **студент** і **адміністратор**. Для адміністратора заплановано керування кімнатами, створення слотів, генерацію й друк QR, перегляд бронювань, ручне підтвердження і скасування; ці ендпоінти та екрани не входять до поточного сценарію. Seed адміністратора вже є.
 
@@ -14,9 +14,9 @@ Roomly допомагає студентам бронювати навчальн
 
 Поверх Walking Skeleton реалізовано **серверну частину першого сценарію**: автентифікацію (US-1.2, US-X.1a/b), каталог кімнат і вільні слоти (US-1.3, US-2.1…2.4), створення бронювання із захистом BR-1 у БД (US-3.1, US-3.4, SYS-AC-06), список, деталі й скасування власних бронювань (US-4.2, US-X.3, US-3.2a/b, US-4.3). Є npm workspaces, Prisma/SQLite, міграції, seed адміністратора й окремий demo-seed, тести, лінтер, форматер і CI. Це опис серверного покриття, а не виконання всіх UI-критеріїв цих історій. Усі **ADR-0001…ADR-0008 мають статус «Запропоновано»**.
 
-У клієнті додано основу #10: маршрути й захист доступу, контекст сесії, типізовані API-функції та спільні компоненти. Каталог #12 показує кімнати й слоти на дату та створює бронювання з переходом до деталей. Форми входу й реєстрації (#11) перевіряють дані схемами `shared/` і показують помилки біля полів. Власні бронювання (#13): список «Майбутні»/«Минулі», деталі з дедлайном і скасування активного бронювання. Сценарій через UI проходить від реєстрації до скасування; автоскасування й check-in не підключені.
+У клієнті додано основу #10: маршрути й захист доступу, контекст сесії, типізовані API-функції та спільні компоненти. Каталог #12 показує кімнати й слоти на дату та створює бронювання з переходом до деталей. Форми входу й реєстрації (#11) перевіряють дані схемами `shared/` і показують помилки біля полів. Власні бронювання (#13): список «Майбутні»/«Минулі», деталі з дедлайном і скасування активного бронювання. Сценарій через UI проходить від реєстрації до скасування; автоскасування виконує сервер (#39); клієнт лише показує статус «Автоскасовано», окремих екранів чи сповіщень немає, а check-in ще не підключений.
 
-**Межі першого сценарію:** check-in, автоскасування (зокрема ліниве), адмін-ендпоінти, нагадування та US-2.6 не підключені. `deadline` обчислюється сервером, але не запускає зміну статусу: бронювання лишається `active` до скасування. За рішенням команди від 13.11.2026 `upcoming` містить живі бронювання з `slot.startsAt > now`; решта, включно з поточними, — `past`. Перехід до історії не змінює статус. Скасувати можна будь-яке власне `active` бронювання.
+**Межі сценарію:** check-in, адмін-ендпоінти, нагадування та US-2.6 не підключені. Автоскасування підключене (#39, рішення 1 зі `checkin_admin_flow.md`): таймер 30 с у `server/src/index.ts` і ліниве скасування перед читанням, створенням і скасуванням; `active` після `deadline` стає `auto_cancelled`. Поки check-in (#40) не злито, підтвердити бронювання неможливо, тож кожне непідтверджене бронювання автоскасовується через 15 хв: це проміжний стан гілки `feature/checkin-admin`. За рішенням команди від 13.11.2026 `upcoming` містить живі бронювання з `slot.startsAt > now`; решта, включно з поточними, — `past`. Перехід до історії не змінює статус. Скасувати можна будь-яке власне `active` бронювання.
 
 Інструкція запуску з нуля, UI-чекліст і перевірка реального перезапуску — у [README.md](README.md), розділ «Як перевірити перший робочий сценарій». UI-чекліст позначай пройденим лише після ручної перевірки. `persistence.test.ts` відкриває нове з'єднання Prisma; це не зупинка й запуск серверного процесу. Готовність здачі #14 також залежить від мерджу #15 у `main` та фактичного подання на DistEdu.
 
@@ -66,13 +66,16 @@ Roomly допомагає студентам бронювати навчальн
 | `package.json` у корені | npm workspaces `shared`, `server`, `client` і спільні скрипти |
 | `.env.example` | Шаблон налаштувань без секретів; `.env` створює `npm run dev` |
 | `scripts/ensure-env.mjs` | Створює `.env` з шаблону, наявний не чіпає |
+| `scripts/dev-tunnel.mjs` | Для `npm run dev:tunnel`: перевіряє `TUNNEL_DOMAIN` і наявність ngrok (`--check`), запускає `ngrok http` на порт клієнта зі статичним доменом |
 | `shared/src/` | `domain.ts` — статуси, ролі, константи; `errors.ts` — коди помилок і HTTP-статуси; `schemas.ts` — схеми Zod вхідних даних; `api.ts` — типи об'єктів і відповідей API; `health.ts` — тип відповіді health |
 | `server/prisma/schema.prisma` | Схема за `data_model.md`, включно з частковим індексом BR-1 |
 | `server/prisma/migrations/` | Міграції; змінюються лише через `prisma migrate dev` |
 | `server/prisma/seed.ts` | Ідемпотентний seed адміністратора зі змінних середовища |
 | `server/prisma/seed-demo.ts` | Окремий ідемпотентний demo-seed: 4 кімнати й майбутні слоти на сьогодні та 3 наступні дні; без студентів і бронювань |
 | `server/src/app.ts` | Збирання Express-застосунку: підключення роутерів модулів, 404 і обробник помилок |
-| `server/src/modules/<модуль>/` | Модулі за доменом; зараз є `health/`, `auth/` (реєстрація, вхід, вихід, `me`, сесії в cookie `roomly_session`), `rooms/` (каталог кімнат, вільні слоти на дату) і `bookings/` (створення з функцією дедлайну, список `upcoming`/`past`, деталі й скасування власних бронювань) |
+| `server/src/modules/<модуль>/` | Модулі за доменом; зараз є `health/`, `auth/` (реєстрація, вхід, вихід, `me`, сесії в cookie `roomly_session`), `rooms/` (каталог кімнат, вільні слоти на дату) і `bookings/` (створення з функцією дедлайну, список `upcoming`/`past`, деталі й скасування власних бронювань; `autoCancel.ts` — функція автоскасування, `autoCancelScheduler.ts` — таймер, який стартує лише з `server/src/index.ts`) |
+| `server/src/modules/checkIns/` | `POST /api/check-ins` (#40): підтвердження присутності за QR кімнати будь-яким студентом, одне умовне оновлення `active` → `confirmed`; `checkInWindow.ts` — єдине місце меж вікна (Q01) для студентського й ручного підтвердження (#42). Серіалізатор `Booking` спільний із `bookings.service.ts` |
+| `server/src/modules/admin/` | `/api/admin/*` (#41): `admin.router.ts` — `requireAuth` + `requireRole('admin')` на весь префікс (студент отримує `FORBIDDEN` і на неіснуючому шляху); `adminRooms.service.ts` — створення й зміна кімнати (`qrToken` генерує сервер), створення слота з перевіркою перетину в одній транзакції, токен QR кімнати. Серіалізатор `Room` спільний із `rooms.service.ts`; `adminBookings.service.ts` (#42) — усі бронювання з власником (`AdminBooking`) і ручне підтвердження через `confirmCurrentBooking` і вікно з `checkIns/`, без дублювання; серіалізатор `Booking` спільний із `bookings.service.ts` |
 | `server/src/lib/clock.ts` | Єдине підмінюване джерело часу |
 | `server/src/lib/localDate.ts` | Дата університету (`YYYY-MM-DD`) для моменту UTC у поясі `APP_TIMEZONE`; єдине місце цього перетворення |
 | `server/src/lib/appError.ts` | Помилка з кодом із `error_format.md` |
@@ -82,14 +85,17 @@ Roomly допомагає студентам бронювати навчальн
 | `server/src/middleware/validate.ts` | Перевірка `params`/`query`/`body` схемами Zod із `shared/`; невдача — `VALIDATION_ERROR` з `details.fields` |
 | `server/src/db/prisma.ts` | Клієнт Prisma з адаптером better-sqlite3 |
 | `server/src/generated/` | Згенерований клієнт Prisma; не редагувати, не комітити |
-| `server/test/` | Vitest + Supertest; окрема `prisma/test.db`, створена міграціями. `clientApi.test.ts`, `clientDateTime.test.ts` і `clientAuthForm.test.ts` тимчасово перевіряють чисту логіку клієнта тут на наявному Vitest; це допоміжні перевірки, а не повне проходження AC через UI. DOM-тести потребуватимуть окремого налаштування в `client/` |
+| `server/test/` | Vitest + Supertest; окрема `prisma/test.db`, створена міграціями. Файли тестів виконуються по черзі (`fileParallelism: false`): ліниве автоскасування глобальне й у спільній базі псувало б чужі бронювання. Спільні хелпери (`helpers/factories.ts`, `auth.ts`, `time.ts`): унікальні кімнати, слоти, користувачі й бронювання в довільному статусі, сесії студента й адміністратора, `useClock`; БД між тестами не очищується. Тести клієнта лежать у `client/src/**/*.test.ts` (див. рядок `client/vitest.config.ts`). |
+| `client/vitest.config.ts`, `client/src/**/*.test.ts(x)` | Vitest у `client/`: середовище `node` для чистої логіки (API-функції, дата й час, помилки форм), `jsdom` + Testing Library для файлів із рядком `// @vitest-environment jsdom` (приклад: `components/EmptyState.test.tsx`); пояс університету в тестах фіксований `Europe/Kyiv`. Кореневий `npm test` запускає серверні й клієнтські тести |
 | `client/src/api/http.ts` | Єдина обгортка над fetch: `ApiError` (код із сервера) і `NetworkError` |
-| `client/src/api/` | `auth.ts`, `rooms.ts`, `bookings.ts` — типізовані функції на контрактах `shared/`; `errorMessages.ts` — тексти за машинним кодом |
-| `client/src/auth/` | `AuthProvider`/`useAuth`: відновлення сесії через `/auth/me`, вхід, реєстрація й вихід; `AuthRoute` — захист маршрутів; `useAuthForm` і `fieldErrors` — стан форм входу/реєстрації та тексти помилок полів |
-| `client/src/components/` | `Layout`, `Loader`, `ErrorMessage`, `EmptyState`, `TextField`; стилі через CSS Modules |
-| `client/src/App.tsx` | Маршрути `/login`, `/register`, `/rooms`, `/bookings`, `/bookings/:id`; `/login` — `LoginPage`, `/register` — `RegisterPage`, `/rooms` — `RoomsPage`, `/bookings` — `BookingsPage`, `/bookings/:id` — `BookingDetailsPage` |
-| `client/src/pages/` | `LoginPage`, `RegisterPage` — вхід і реєстрація; `RoomsPage` — каталог, дата, слоти й створення бронювання; `BookingsPage` — власні бронювання (майбутні й історія), `BookingDetailsPage` — деталі й скасування, `HomePage` — початкова заглушка каркаса |
-| `client/src/lib/dateTime.ts` | Дата запиту й відображення часу в поясі університету; Vite передає лише публічний `APP_TIMEZONE` як константу збірки, решта `.env` не потрапляє у браузер |
+| `client/src/api/` | `auth.ts`, `rooms.ts`, `bookings.ts`, `adminRooms.ts` (створення й зміна кімнати, створення слота), `checkIns.ts` (`POST /check-ins`, #43) — типізовані функції на контрактах `shared/`; `errorMessages.ts` — тексти за машинним кодом |
+| `client/src/auth/` | `AuthProvider`/`useAuth`: відновлення сесії через `/auth/me`, вхід, реєстрація й вихід; `AuthRoute` — захист маршрутів (`guestOnly`, `studentOnly`, `adminOnly`: студент бачить пояснення, гість іде на `/login`); `useAuthForm` і `fieldErrors` — стан форм входу/реєстрації та тексти помилок полів |
+| `client/src/components/` | `Layout`, `Loader`, `ErrorMessage`, `EmptyState`, `TextField`; `QrScanner` (#43) — камера через `getUserMedia` і декодування QR бібліотекою `jsqr`, що завантажується окремим файлом лише на екрані сканування; потік зупиняється при виході; стилі через CSS Modules |
+| `client/src/App.tsx` | Маршрути `/login`, `/register`, `/rooms`, `/bookings`, `/bookings/:id`, `/check-in`, `/admin/rooms`; `/login` — `LoginPage`, `/register` — `RegisterPage`, `/rooms` — `RoomsPage`, `/bookings` — `BookingsPage`, `/bookings/:id` — `BookingDetailsPage`, `/check-in` — `CheckInPage` (лише студенту); адміністратору — `/admin` (перенаправлення) і `/admin/rooms` — `AdminRoomsPage` |
+| `client/src/pages/` | `LoginPage`, `RegisterPage` — вхід і реєстрація; `RoomsPage` — каталог, дата, слоти й створення бронювання; `BookingsPage` — власні бронювання (майбутні й історія), `BookingDetailsPage` — деталі й скасування, `CheckInPage` — підтвердження присутності скануванням QR або ручним введенням, повтор після мережевої помилки (#43), `HomePage` — початкова заглушка каркаса; `AdminRoomsPage` з `AdminRoomForm` і `AdminSlotForm` — кімнати й слоти адміністратора |
+| `client/src/lib/dateTime.ts` | Дата запиту й відображення часу в поясі університету; Vite передає лише публічний `APP_TIMEZONE` як константу збірки, решта `.env` не потрапляє у браузер; `universityDateTimeToUtc`/`universityTime` — дата й час форми ↔ UTC ISO без бібліотек |
+| `client/src/lib/checkIn.ts` | Чиста логіка екрана підтвердження (#43): результат або помилка `POST /check-ins` → стан UI (`confirmed`, `already_confirmed`, `window_closed`, `too_early`, `no_booking`, `qr_unknown`, `network`, `unknown`) і його тексти; `network` розрізняє «не надіслано, офлайн» і «відповідь втрачено» (Q11) |
+| `client/src/lib/adminForms.ts`, `useFocusRequest.ts` | Чиста логіка адмін-форм: рядки → тіла `CreateRoomBody`/`UpdateRoomBody` (лише змінені поля)/`CreateSlotBody`, тексти помилок полів за `reason`; фокус на першому полі з помилкою |
 | `.github/workflows/ci.yml` | lint, format:check, typecheck, test, build |
 | `.github/workflows/ai-review.yml` | ШІ-рев'ю кожного PR за правилами `prompts/5.3_ai_code_review.md`; секрет `CLAUDE_CODE_OAUTH_TOKEN` |
 | `.github/pull_request_template.md` | Шаблон опису Pull Request |
@@ -111,7 +117,7 @@ Roomly допомагає студентам бронювати навчальн
 | Запуск | Node.js + npm, без Docker; проксі Vite до API | ADR-0007 |
 | Перевірки | Vitest, Supertest, SQLite для інтеграційних тестів; ESLint, Prettier, strict TypeScript | ADR-0008 |
 
-**Фактичні версії** (див. маніфести й `package-lock.json`): Node.js 22 LTS (`.nvmrc`, `engines`), TypeScript 6.0 (не 7: typescript-eslint підтримує < 6.1), Express 5, React 19, React Router 8, Vite 8, Vitest 5, ESLint 10, Zod 4 (у `shared` і `server`), Prisma **7.10.1** точно. Не оновлюй Prisma до 8 (тег `latest` вказує на 8.0.0-rc) і не підміняй версії тегом `latest`. Вхід через bcryptjs і серверні сесії підключені (модуль `auth/`); таймер автоскасування ще ні: він з'являється разом з історіями.
+**Фактичні версії** (див. маніфести й `package-lock.json`): Node.js 22 LTS (`.nvmrc`, `engines`), TypeScript 6.0 (не 7: typescript-eslint підтримує < 6.1), Express 5, React 19, React Router 8, Vite 8, Vitest 5, ESLint 10, Zod 4 (у `shared` і `server`), Prisma **7.10.1** точно. Не оновлюй Prisma до 8 (тег `latest` вказує на 8.0.0-rc) і не підміняй версії тегом `latest`. Вхід через bcryptjs і серверні сесії підключені (модуль `auth/`); таймер автоскасування підключено (`autoCancelScheduler.ts`).
 
 ### Збірка, запуск і тестування
 
@@ -121,6 +127,7 @@ Roomly допомагає студентам бронювати навчальн
 | --- | --- | --- |
 | Установлення залежностей | `npm install` | Ставить пакети всіх workspaces і генерує клієнт Prisma (`postinstall`) |
 | Локальний запуск | `npm run dev` | `.env` з шаблону, якщо його немає → `prisma migrate deploy` → seed адміністратора → сервер (`:3000`) і клієнт (`:5173`) через concurrently |
+| Запуск із HTTPS-тунелем | `npm run dev:tunnel` | Те саме, що `npm run dev`, плюс `ngrok http` на порт клієнта зі статичним доменом з `TUNNEL_DOMAIN` (для камери на телефоні); потребує встановленого ngrok і `.env`, див. README |
 | Збірка | `npm run build` | `typecheck` і `vite build` клієнта |
 | Автоматичні тести | `npm test` | `vitest run` у `server/` на окремій `test.db`; одноразово, не watch |
 | Перевірка типів | `npm run typecheck` | `tsc --noEmit` у `shared`, `server`, `client` |
@@ -130,7 +137,7 @@ Roomly допомагає студентам бронювати навчальн
 | Демо-дані | `npm run db:seed:demo -w server` | `server/prisma/seed-demo.ts`: кімнати й слоти відносно моменту запуску, без користувачів і бронювань; ідемпотентний, з `npm run dev` не запускається |
 | Перегляд даних | `npm run db:studio -w server` | Prisma Studio |
 
-`npm run dev` застосовує лише **наявні** міграції й не скидає базу. Порти й параметри — змінні `SERVER_PORT`, `CLIENT_PORT`, `DATABASE_URL`, `APP_TIMEZONE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` у `.env`; нових змінних не вигадуй без оновлення `.env.example` і README. Сервер у dev запускається через `node --watch --import tsx`, бо `tsx watch` під concurrently на Windows не стартує.
+`npm run dev` застосовує лише **наявні** міграції й не скидає базу. Порти й параметри — змінні `SERVER_PORT`, `CLIENT_PORT`, `DATABASE_URL`, `APP_TIMEZONE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`, а для `npm run dev:tunnel` ще `TUNNEL_DOMAIN`, у `.env`; нових змінних не вигадуй без оновлення `.env.example` і README. Сервер у dev запускається через `node --watch --import tsx`, бо `tsx watch` під concurrently на Windows не стартує.
 
 Перед PR за issue #14 запускай `npm run lint`, `npm run format:check`, `npm run typecheck` і `npm test`, навіть якщо змінено лише документацію. Для фінального сценарію також перевір `npm run build`. Записуй фактичний результат; заблокований запуск не є успішною перевіркою.
 

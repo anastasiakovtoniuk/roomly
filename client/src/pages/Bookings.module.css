@@ -31,6 +31,8 @@
 
 .tab {
   flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 0.5rem;
   border-color: var(--color-border);
   background: transparent;
   color: var(--color-accent);
@@ -102,6 +104,20 @@
 .cancelled,
 .unknown {
   color: var(--color-muted);
+}
+
+/* Автоскасоване відрізняється від власного скасування (US-X.3-AC-02). */
+.autoCancelled {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.reminder {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-bg);
+  font-size: 0.875rem;
 }
 
 .meta {

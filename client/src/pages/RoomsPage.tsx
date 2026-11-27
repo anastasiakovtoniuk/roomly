@@ -9,6 +9,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Loader } from '../components/Loader';
 import { formatDate, formatTime, universityDate } from '../lib/dateTime';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import styles from './RoomsPage.module.css';
 
 const SLOT_REFRESH_ERROR_CODES: readonly ErrorCode[] = [
@@ -16,6 +17,9 @@ const SLOT_REFRESH_ERROR_CODES: readonly ErrorCode[] = [
   'SLOT_NOT_BOOKABLE',
   'SLOT_NOT_FOUND',
 ];
+
+// Межа, з якої каталог показує кімнати й вільний час у двох колонках (збігається з RoomsPage.module.css).
+const WIDE_LAYOUT_QUERY = '(min-width: 58rem)';
 
 type RoomsState = { kind: 'loading' } | { kind: 'ready'; rooms: Room[] } | { kind: 'error'; error: unknown };
 
@@ -26,6 +30,7 @@ type SlotsState =
 export function RoomsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isWide = useMediaQuery(WIDE_LAYOUT_QUERY);
   const [roomsState, setRoomsState] = useState<RoomsState>({ kind: 'loading' });
   const [roomId, setRoomId] = useState<string | null>(null);
   const [date, setDate] = useState(universityDate);
@@ -99,8 +104,21 @@ export function RoomsPage() {
   const isBooking = bookingSlotId !== null;
   const canBook = user?.role === 'student';
 
+  // На вузькому екрані вільний час відкривається під обраною кімнатою, а панель попередньої кімнати
+  // зникає: без прокручування обрана картка могла б зсунутись за межі екрана.
+  const scrollToRoom = useRef(false);
+  useEffect(() => {
+    if (!scrollToRoom.current) return;
+    // Прапорець скидається завжди: вибір на широкому екрані не повинен прокрутити сторінку пізніше,
+    // коли вікно звузиться.
+    scrollToRoom.current = false;
+    if (isWide || !roomId) return;
+    document.getElementById(`room-${roomId}`)?.scrollIntoView({ block: 'start' });
+  }, [roomId, isWide]);
+
   function selectRoom(nextRoomId: string) {
     if (bookingLock.current || nextRoomId === roomId) return;
+    scrollToRoom.current = true;
     setRoomId(nextRoomId);
     setSlotsState(null);
     setBookingError(null);
@@ -155,6 +173,94 @@ export function RoomsPage() {
     }
   }
 
+  // Обмеження: панель рендериться в різних місцях дерева залежно від `isWide`, тож перетин межі
+  // ширини (поворот екрана) під час запиту бронювання перемонтує її й може втратити фокус чи позицію
+  // прокручування. Дані й стан бронювання лишаються в RoomsPage і не губляться; рідкісний випадок прийнято.
+  const availability = (
+    <section
+      id="room-slots"
+      className={`${styles.availability} ${isWide ? '' : styles.inline}`}
+      aria-labelledby="slots-title"
+      aria-busy={isBooking}
+    >
+      <div className={styles.sectionHeading}>
+        <div>
+          <p className={styles.eyebrow}>Вільний час</p>
+          <h2 id="slots-title">{selectedRoom?.name ?? 'Обери кімнату'}</h2>
+        </div>
+        <button
+          type="button"
+          className={styles.refreshButton}
+          onClick={refreshSlots}
+          disabled={isBooking || !selectedRoom}
+        >
+          Оновити
+        </button>
+      </div>
+      <label className={styles.dateLabel} htmlFor="booking-date">
+        Дата зустрічі
+      </label>
+      <input
+        id="booking-date"
+        className={styles.dateInput}
+        type="date"
+        value={date}
+        min={universityDate()}
+        disabled={isBooking || !selectedRoom}
+        onChange={(event) => selectDate(event.target.value)}
+      />
+      <p className={styles.timezone}>Дата й час за часовим поясом університету.</p>
+
+      {!canBook && <p className={styles.notice}>Бронювання доступне зі студентського акаунта.</p>}
+      {bookingError !== null && (
+        <div className={styles.bookingError}>
+          <ErrorMessage error={bookingError} />
+        </div>
+      )}
+      {uncertainSlotIds.size > 0 && (
+        <p className={styles.notice} role="status">
+          Результат попереднього бронювання ще невідомий.{' '}
+          <Link className={styles.checkBookings} to="/bookings">
+            Перевірити мої бронювання
+          </Link>
+        </p>
+      )}
+      {!date ? (
+        <EmptyState title="Обери дату зустрічі" />
+      ) : !currentSlots ? (
+        <Loader label="Шукаємо вільний час…" />
+      ) : currentSlots.kind === 'error' ? (
+        <ErrorMessage error={currentSlots.error} onRetry={refreshSlots} />
+      ) : currentSlots.data.slots.length === 0 ? (
+        <EmptyState title="На цю дату вільного часу немає" description="Обери іншу дату або кімнату." />
+      ) : (
+        <ul className={styles.slots} aria-label="Вільні слоти">
+          {currentSlots.data.slots.map((slot) => (
+            <li className={styles.slot} key={slot.id}>
+              <div>
+                <p className={styles.slotTime}>
+                  <time dateTime={slot.startsAt}>{formatTime(slot.startsAt)}</time>
+                  {' — '}
+                  <time dateTime={slot.endsAt}>{formatTime(slot.endsAt)}</time>
+                </p>
+                <p className={styles.slotDate}>{formatDate(slot.startsAt)}</p>
+              </div>
+              {canBook && (
+                <button
+                  type="button"
+                  disabled={isBooking || uncertainSlotIds.has(slot.id)}
+                  onClick={() => void handleBooking(slot)}
+                >
+                  {bookingSlotId === slot.id ? 'Бронюємо…' : 'Забронювати'}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
   return (
     <div className={styles.page}>
       <header className={styles.heading}>
@@ -189,7 +295,10 @@ export function RoomsPage() {
             <ul className={styles.rooms}>
               {roomsState.rooms.map((room) => (
                 <li key={room.id}>
-                  <article className={`${styles.roomCard} ${room.id === roomId ? styles.selected : ''}`}>
+                  <article
+                    id={`room-${room.id}`}
+                    className={`${styles.roomCard} ${room.id === roomId ? styles.selected : ''}`}
+                  >
                     <div className={styles.cardHeading}>
                       <h3>{room.name}</h3>
                       <span className={styles.capacity}>{room.capacity} місць</span>
@@ -217,93 +326,13 @@ export function RoomsPage() {
                       {room.id === roomId ? 'Обрано' : 'Обрати кімнату'}
                     </button>
                   </article>
+                  {!isWide && room.id === roomId && availability}
                 </li>
               ))}
             </ul>
           </section>
 
-          <section
-            id="room-slots"
-            className={styles.availability}
-            aria-labelledby="slots-title"
-            aria-busy={isBooking}
-          >
-            <div className={styles.sectionHeading}>
-              <div>
-                <p className={styles.eyebrow}>Вільний час</p>
-                <h2 id="slots-title">{selectedRoom?.name ?? 'Обери кімнату'}</h2>
-              </div>
-              <button
-                type="button"
-                className={styles.refreshButton}
-                onClick={refreshSlots}
-                disabled={isBooking || !selectedRoom}
-              >
-                Оновити
-              </button>
-            </div>
-            <label className={styles.dateLabel} htmlFor="booking-date">
-              Дата зустрічі
-            </label>
-            <input
-              id="booking-date"
-              className={styles.dateInput}
-              type="date"
-              value={date}
-              min={universityDate()}
-              disabled={isBooking || !selectedRoom}
-              onChange={(event) => selectDate(event.target.value)}
-            />
-            <p className={styles.timezone}>Дата й час за часовим поясом університету.</p>
-
-            {!canBook && <p className={styles.notice}>Бронювання доступне зі студентського акаунта.</p>}
-            {bookingError !== null && (
-              <div className={styles.bookingError}>
-                <ErrorMessage error={bookingError} />
-              </div>
-            )}
-            {uncertainSlotIds.size > 0 && (
-              <p className={styles.notice} role="status">
-                Результат попереднього бронювання ще невідомий.{' '}
-                <Link className={styles.checkBookings} to="/bookings">
-                  Перевірити мої бронювання
-                </Link>
-              </p>
-            )}
-            {!date ? (
-              <EmptyState title="Обери дату зустрічі" />
-            ) : !currentSlots ? (
-              <Loader label="Шукаємо вільний час…" />
-            ) : currentSlots.kind === 'error' ? (
-              <ErrorMessage error={currentSlots.error} onRetry={refreshSlots} />
-            ) : currentSlots.data.slots.length === 0 ? (
-              <EmptyState title="На цю дату вільного часу немає" description="Обери іншу дату або кімнату." />
-            ) : (
-              <ul className={styles.slots} aria-label="Вільні слоти">
-                {currentSlots.data.slots.map((slot) => (
-                  <li className={styles.slot} key={slot.id}>
-                    <div>
-                      <p className={styles.slotTime}>
-                        <time dateTime={slot.startsAt}>{formatTime(slot.startsAt)}</time>
-                        {' — '}
-                        <time dateTime={slot.endsAt}>{formatTime(slot.endsAt)}</time>
-                      </p>
-                      <p className={styles.slotDate}>{formatDate(slot.startsAt)}</p>
-                    </div>
-                    {canBook && (
-                      <button
-                        type="button"
-                        disabled={isBooking || uncertainSlotIds.has(slot.id)}
-                        onClick={() => void handleBooking(slot)}
-                      >
-                        {bookingSlotId === slot.id ? 'Бронюємо…' : 'Забронювати'}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          {isWide && availability}
         </div>
       )}
     </div>

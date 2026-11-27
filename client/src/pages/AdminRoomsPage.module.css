@@ -1,0 +1,172 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+  max-width: 40rem;
+}
+
+.heading h1 {
+  margin: 0 0 0.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.intro,
+.hint {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.hint {
+  font-size: 0.8rem;
+}
+
+.card {
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.card h2,
+.card h3 {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* Два поля часу поруч навіть на 375 px: обидва короткі. */
+.timeRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.equipment {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+}
+
+.equipment legend {
+  padding-inline: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Кнопка «Видалити» вирівнюється по полю, а не по підпису над ним. */
+.equipmentItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.equipmentItem > button {
+  margin-top: 1.65rem;
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 0.8rem;
+}
+
+.secondaryButton {
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.actions > button {
+  flex: 1 1 10rem;
+}
+
+.notice {
+  margin: 0;
+  color: var(--color-ok);
+  font-size: 0.875rem;
+}
+
+.sectionHeading,
+.cardHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sectionHeading {
+  margin-bottom: 1rem;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.count {
+  min-width: 1.75rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 2rem;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.rooms {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rooms .notice {
+  margin-bottom: 1rem;
+}
+
+.cardHeading h3 {
+  margin: 0;
+}
+
+.capacity {
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.location {
+  margin: 0.5rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.location + button {
+  margin-top: 1rem;
+}

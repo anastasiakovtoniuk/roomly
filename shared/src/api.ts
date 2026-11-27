@@ -1,6 +1,6 @@
-// Об'єкти й тіла відповідей — docs/contracts/api_spec.md §2, §5–7.
+// Об'єкти й тіла відповідей — docs/contracts/api_spec.md §2, §5–9.
 // Дата-час — рядок ISO 8601 в UTC (TA-4).
-import type { BookingStatus, UserRole } from './domain';
+import type { BookingStatus, CheckInResultKind, UserRole } from './domain';
 
 // passwordHash і дані сесій не повертаються ніколи.
 export interface User {
@@ -81,4 +81,34 @@ export interface BookingResponse {
 export interface BookingListResponse {
   bookings: Booking[];
   serverTime: string;
+}
+
+// Бронювання для адміністратора: Booking + власник (US-A.5). Студентам не повертається.
+export interface AdminBooking extends Booking {
+  student: Pick<User, 'id' | 'name' | 'email'>;
+}
+
+// POST /api/check-ins, POST /api/admin/bookings/:bookingId/confirm; обидва result — успіх (BR-10).
+export interface CheckInResult {
+  result: CheckInResultKind;
+  booking: Booking;
+  serverTime: string;
+}
+
+// GET /api/admin/bookings
+export interface AdminBookingListResponse {
+  bookings: AdminBooking[];
+  serverTime: string;
+}
+
+// POST /api/admin/rooms/:roomId/slots
+export interface SlotResponse {
+  slot: Slot;
+}
+
+// GET /api/admin/rooms/:roomId/qr — лише адміністратору (FB-12); той самий токен при повторі (FB-13).
+export interface QrTokenResponse {
+  roomId: string;
+  roomName: string;
+  qrToken: string;
 }

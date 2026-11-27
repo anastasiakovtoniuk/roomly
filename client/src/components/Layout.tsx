@@ -49,8 +49,19 @@ export function Layout() {
               Кімнати
             </NavLink>
             {auth.user.role === 'student' && (
-              <NavLink to="/bookings" className={({ isActive }) => (isActive ? styles.active : undefined)}>
-                Мої бронювання
+              <>
+                <NavLink to="/bookings" className={({ isActive }) => (isActive ? styles.active : undefined)}>
+                  Мої бронювання
+                </NavLink>
+                <NavLink to="/check-in" className={({ isActive }) => (isActive ? styles.active : undefined)}>
+                  Підтвердити присутність
+                </NavLink>
+              </>
+            )}
+            {/* Пункт «Адмін: бронювання» з'явиться разом із маршрутом #46. */}
+            {auth.user.role === 'admin' && (
+              <NavLink to="/admin/rooms" className={({ isActive }) => (isActive ? styles.active : undefined)}>
+                Адмін: кімнати
               </NavLink>
             )}
           </nav>

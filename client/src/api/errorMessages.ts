@@ -15,12 +15,17 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
   SLOT_NOT_BOOKABLE: 'Цей слот уже почався або завершився. Обери інший час.',
   SLOT_OVERLAP: 'Цей час перетинається з іншим слотом.',
   BOOKING_STATUS_CONFLICT: 'Стан бронювання змінився. Онови його перед наступною дією.',
-  QR_UNKNOWN: 'QR-код не розпізнано.',
-  NO_CURRENT_BOOKING: 'Для цієї кімнати немає поточного бронювання.',
-  CHECK_IN_WINDOW_CLOSED: 'Час підтвердження присутності минув.',
-  CHECK_IN_TOO_EARLY: 'Час підтвердження присутності ще не настав.',
+  // Тексти підтвердження робочі (Q13, Q15); спільні для студента (#43) й адміністратора (#46).
+  QR_UNKNOWN: 'QR-код не розпізнано: він не належить жодній кімнаті.',
+  NO_CURRENT_BOOKING: 'У цій кімнаті зараз немає бронювання, яке можна підтвердити.',
+  CHECK_IN_WINDOW_CLOSED: 'Час підтвердження присутності минув, бронювання автоскасоване.',
+  CHECK_IN_TOO_EARLY: 'Бронювання ще не почалося, підтвердити присутність поки не можна.',
   INTERNAL_ERROR: 'Не вдалося виконати дію. Спробуй пізніше.',
 };
+
+export function getErrorMessageByCode(code: ErrorCode): string {
+  return ERROR_MESSAGES[code] ?? ERROR_MESSAGES.INTERNAL_ERROR;
+}
 
 export function getErrorMessage(error: unknown): string {
   if (error instanceof NetworkError) {

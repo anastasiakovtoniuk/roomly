@@ -63,6 +63,12 @@ jobs:
             echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
 
+      # Момент початку рев'ю: за ним перевіряємо, що агент справді опублікував коментар.
+      - name: Mark review start
+        id: started
+        if: steps.token.outputs.present == 'true'
+        run: echo "at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Claude review
         if: steps.token.outputs.present == 'true'
         uses: anthropics/claude-code-action@v1
@@ -100,3 +106,20 @@ jobs:
             ПРАВИЛА (кінець)
           claude_args: |
             --allowedTools "Read,Glob,Grep,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"
+
+      # Агент може завершитися успішно, але не опублікувати коментар (наприклад, команду
+      # `gh pr comment` відхилено дозволами): тоді job зелений без жодного рев'ю. Перевіряємо,
+      # що після початку з'явився коментар «## ШІ-рев'ю» від github-actions, інакше job падає.
+      - name: Verify review comment was posted
+        if: steps.token.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          STARTED_AT: ${{ steps.started.outputs.at }}
+        run: |
+          posted=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json comments --jq '[.comments[] | select(.author.login == "github-actions" and (.body | startswith("## ШІ")) and .createdAt >= "'"$STARTED_AT"'")] | length')
+          if [ "$posted" -lt 1 ]; then
+            echo "::error::Агент завершився, але коментар «ШІ-рев'ю» не опубліковано. Перезапустіть job (Re-run jobs); якщо повториться, перегляньте permission_denials у логу кроку Claude review."
+            exit 1
+          fi
+          echo "Коментар ШІ-рев'ю опубліковано ($posted)."
