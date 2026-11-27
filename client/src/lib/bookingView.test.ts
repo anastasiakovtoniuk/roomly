@@ -8,7 +8,7 @@ describe('Відображення власних бронювань на клі
     expect(bookingStatusLabel('active')).toBe('Активне');
     expect(bookingStatusLabel('confirmed')).toBe('Підтверджене');
     expect(bookingStatusLabel('cancelled_by_student')).toBe('Скасовано студентом');
-    expect(bookingStatusLabel('auto_cancelled')).toBe('Автоскасовано');
+    expect(bookingStatusLabel('auto_cancelled')).toBe('Автоскасоване');
     for (const status of BOOKING_STATUSES) {
       expect(bookingStatusLabel(status)).not.toBe('Статус невідомий');
       expect(bookingStatusTone(status)).not.toBe('unknown');
