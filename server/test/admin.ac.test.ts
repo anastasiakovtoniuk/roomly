@@ -188,7 +188,8 @@ describe('US-A.1b — редагування кімнати', () => {
 
     expect(res.status).toBe(400);
     expect(error(res).code).toBe('VALIDATION_ERROR');
-    expect(fieldPaths(res).length).toBeGreaterThan(0);
+    // Правило «хоча б одне поле» стосується тіла цілком: шлях `body`, reason — код Zod (error_format.md §1).
+    expect(error(res).details?.fields).toEqual([{ path: 'body', reason: 'custom' }]);
     expect((await roomInDb(room.id)).capacity).toBe(4);
   });
 
@@ -535,17 +536,24 @@ describe('SYS-AC-09 — адмін-ендпоінти закриті для го
       const student = await studentSession();
       const admin = await adminSession(app);
 
-      const guest = await call(method, path, null, body?.());
+      // Одне тіло на всі три ролі: для створення кімнати це та сама унікальна назва.
+      const payload = body?.();
+
+      const guest = await call(method, path, null, payload);
       expect(guest.status).toBe(401);
       expect(error(guest).code).toBe('UNAUTHENTICATED');
 
-      const asStudent = await call(method, path, student.cookie, body?.());
+      const asStudent = await call(method, path, student.cookie, payload);
       expect(asStudent.status).toBe(403);
       expect(error(asStudent).code).toBe('FORBIDDEN');
 
-      const asAdmin = await call(method, path, admin.cookie, body?.());
+      const asAdmin = await call(method, path, admin.cookie, payload);
       expect(asAdmin.status).toBe(expected.status);
       if (expected.code) expect(error(asAdmin).code).toBe(expected.code);
+      // Наслідок, а не лише статус: кімнату збережено рівно один раз — адміністратором, не гостем і не студентом.
+      if (payload && 'name' in payload) {
+        expect(await prisma.room.count({ where: { name: payload.name as string } })).toBe(1);
+      }
     },
   );
 });
