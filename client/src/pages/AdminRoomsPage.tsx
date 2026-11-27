@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import type { Room } from '@roomly/shared';
 import { listRooms } from '../api/rooms';
 import { EmptyState } from '../components/EmptyState';
@@ -13,7 +14,7 @@ type RoomsState = { kind: 'loading' } | { kind: 'ready'; rooms: Room[] } | { kin
 
 // /admin/rooms: кімнати й слоти адміністратора (US-A.1a, US-A.1b, US-A.2). Список — той самий
 // GET /api/rooms, що бачить студент, тож після збереження адміністратор бачить дані каталогу.
-// Токен QR тут не показується (FB-12): друк QR — окремий екран #46.
+// Токен QR тут не показується (FB-12): друк QR — окремий екран /admin/rooms/:roomId/qr (#46).
 export function AdminRoomsPage() {
   const [roomsState, setRoomsState] = useState<RoomsState>({ kind: 'loading' });
   const [roomsVersion, setRoomsVersion] = useState(0);
@@ -145,17 +146,22 @@ export function AdminRoomsPage() {
                         ? `Обладнання: ${room.equipment.join(', ')}`
                         : 'Обладнання не вказано'}
                     </p>
-                    <button
-                      id={`edit-room-button-${room.id}`}
-                      type="button"
-                      className={styles.secondaryButton}
-                      onClick={() => {
-                        setSavedNotice(null);
-                        setEditingRoomId(room.id);
-                      }}
-                    >
-                      Редагувати
-                    </button>
+                    <div className={styles.roomActions}>
+                      <button
+                        id={`edit-room-button-${room.id}`}
+                        type="button"
+                        className={styles.secondaryButton}
+                        onClick={() => {
+                          setSavedNotice(null);
+                          setEditingRoomId(room.id);
+                        }}
+                      >
+                        Редагувати
+                      </button>
+                      <Link className={styles.qrLink} to={`/admin/rooms/${encodeURIComponent(room.id)}/qr`}>
+                        QR-код для друку
+                      </Link>
+                    </div>
                   </>
                 )}
               </li>
