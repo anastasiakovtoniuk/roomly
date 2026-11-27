@@ -6,6 +6,21 @@
 
 _Матриця «ID критерію → тест → рівень» і кількість тестів: issue #54._
 
+### Клієнтська логіка (#52)
+
+35 тестів у `client/src`, рівень — модульний (чисті функції, середовище `node`) і компонентний (jsdom + Testing Library); моки лише `fetch`, `navigator.onLine` і годинник. Повний перелік «AC → тест» — у `prompts/6.2_test_generation.md` (секція Зінченко Вероніки).
+
+| Критерії | Файли |
+| --- | --- |
+| US-5.1-AC-01, 03…06; US-5.6a-AC-01…02; US-5.6b-AC-01, 03; Q11 | `lib/checkIn.test.ts`, `pages/CheckInPage.test.tsx` |
+| `error_format.md` §1 (тексти 18 кодів) | `api/errorMessages.test.ts` |
+| US-5.3-AC-01…03; US-5.4-AC-01…02 | `lib/countdown.test.ts`, `components/BookingCheckInPrompt.test.tsx` |
+| US-4.1-AC-01…02; US-4.2-AC-01; US-X.3-AC-01 | `lib/bookingTiming.test.ts` |
+
+**«Зламай код навмисно»:** мутації (а) відлік від grace period замість `deadline` → 7 червоних; (б) нагадування для `confirmed` → 1; (в) `NetworkError` → успіх → 5; (г) код без тексту → 1. Деталі — `prompts/6.3_qa_audit_and_debugging.md`.
+
+Не автоматизовано (ручний чекліст #53): камера, реальний таймер у браузері, показ у відкритому застосунку, верстка 375 px. Межі рівно на початку, кінці слота й рівно 24 год не тестуються (Q01, Q05/G10).
+
 ## 2. Ручний чекліст
 
 _Чекліст і результат проходження: issue #53._
