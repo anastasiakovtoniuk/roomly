@@ -2,6 +2,8 @@ import { Link, Navigate, Route, Routes } from 'react-router';
 import { AuthRoute } from './auth/AuthRoute';
 import { Layout } from './components/Layout';
 import { EmptyState } from './components/EmptyState';
+import { AdminBookingsPage } from './pages/AdminBookingsPage';
+import { AdminRoomQrPage } from './pages/AdminRoomQrPage';
 import { AdminRoomsPage } from './pages/AdminRoomsPage';
 import { BookingDetailsPage } from './pages/BookingDetailsPage';
 import { BookingsPage } from './pages/BookingsPage';
@@ -38,6 +40,8 @@ export function App() {
         <Route element={<AuthRoute adminOnly />}>
           <Route path="admin" element={<Navigate to="/admin/rooms" replace />} />
           <Route path="admin/rooms" element={<AdminRoomsPage />} />
+          <Route path="admin/rooms/:roomId/qr" element={<AdminRoomQrPage />} />
+          <Route path="admin/bookings" element={<AdminBookingsPage />} />
         </Route>
         <Route
           path="*"

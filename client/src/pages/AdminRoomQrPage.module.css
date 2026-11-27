@@ -1,0 +1,104 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+  max-width: 40rem;
+}
+
+.page h1 {
+  margin: 0 0 0.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.sheet {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* Біла підкладка лишає тиху зону навколо коду й у темній темі. */
+.code {
+  width: min(100%, 20rem);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.roomName {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.caption {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.actions > button {
+  flex: 1 1 10rem;
+}
+
+.back {
+  justify-self: start;
+  padding-block: 0.65rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* На папері лишаються тільки QR і назва кімнати (US-A.4b); навігацію Layout ховає сам. */
+@media print {
+  .noPrint {
+    display: none !important;
+  }
+
+  .page {
+    max-width: none;
+  }
+
+  .sheet {
+    border: none;
+    padding: 0;
+    background: #fff;
+    color: #000;
+  }
+
+  .code {
+    width: 12cm;
+    padding: 0;
+  }
+
+  .roomName {
+    color: #000;
+    font-size: 28pt;
+  }
+}
